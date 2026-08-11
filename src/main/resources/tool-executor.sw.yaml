@@ -46,7 +46,7 @@ states:
           arguments:
             timezone: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .timezone }'
         actionDataFilter:
-          toResults: '.tool_result'
+          toStateData: '.tool_result'
     end: true
 
   - name: Execute Calculator Tool
@@ -58,7 +58,7 @@ states:
           arguments:
             expression: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .expression }'
         actionDataFilter:
-          toResults: '.tool_result'
+          toStateData: '.tool_result'
     end: true
 
   - name: Execute MCP Tool
@@ -71,7 +71,7 @@ states:
             name: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .name }'
             arguments: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .arguments // {} }'
         actionDataFilter:
-          toResults: '.tool_result'
+          toStateData: '.tool_result'
     end: true
 
   - name: Execute A2A Delegation
@@ -84,7 +84,7 @@ states:
             target_agent: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .target_agent }'
             prompt: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .prompt }'
         actionDataFilter:
-          toResults: '.tool_result'
+          toStateData: '.tool_result'
     end: true
 
   - name: Unsupported Tool
