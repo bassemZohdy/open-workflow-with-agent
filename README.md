@@ -34,7 +34,7 @@ curl -X POST http://localhost:8080/llm_tool_agent \
   }'
 ```
 
-The workflow is named `llm_tool_agent` (display name: `LLM Tool Agent`). The reusable external catalogs are [catalogs/openai-compatible.yaml](src/main/resources/catalogs/openai-compatible.yaml) and [catalogs/utility-functions.yaml](src/main/resources/catalogs/utility-functions.yaml). They are imported through the `workflow-uri-definitions` extension. The utility catalog exposes time and calculator operations, implemented locally at `/functions/time` and `/functions/calculator`. The complete bounded LLM/tool loop is defined in YAML: it calls the LLM, dispatches approved tool calls to the utility catalog, appends tool results, and repeats until a final response. `LITELLM_BASE_URL` selects the compatible provider endpoint and `LITELLM_API_KEY` supplies the bearer credential. The catalog REST-client configuration matches the workflow’s stable URI aliases, so the catalogs can be mounted as Kubernetes resources without changing the workflow.
+The workflow is named `llm_tool_agent` (display name: `LLM Tool Agent`) and delegates to the reusable [agent-loop.sw.yaml](src/main/resources/agent-loop.sw.yaml) subflow. The external catalogs are [catalogs/openai-compatible.yaml](src/main/resources/catalogs/openai-compatible.yaml) and [catalogs/utility-functions.yaml](src/main/resources/catalogs/utility-functions.yaml). They are imported through the `workflow-uri-definitions` extension inside the subflow. The utility catalog exposes time and calculator operations, implemented locally at `/functions/time` and `/functions/calculator`. The bounded agent loop is now a YAML state machine: it calls the LLM, dispatches approved tool calls to the utility catalog, appends tool results, and repeats until a final response. `LITELLM_BASE_URL` selects the compatible provider endpoint and `LITELLM_API_KEY` supplies the bearer credential.
 
 The response includes the workflow data and the OpenAI-compatible chat-completion payload returned by LiteLLM.
 
@@ -49,10 +49,10 @@ mvn clean test
 ```
 
 Unit tests cover the utility controller, while the workflow integration test starts the real
-Quarkus workflow and utility endpoints and mocks only the external LLM API. Runtime diagnostics
-are written to `logs/application.log`.
+Quarkus parent workflow, agent-loop subflow, and utility endpoint and mocks only the external
+LLM API. Runtime diagnostics are written to `logs/application.log`.
 
-The workflow references `openaiChatCompletion`, `getCurrentTime`, and `calculate` from the external catalogs; the same API resources can be reused by additional workflows without duplicating their contracts. SonataFlow does not define an import mechanism for an external `functions` array or expression functions, so the small aliases and two message-assembly expressions remain local to the workflow while the reusable HTTP APIs stay catalog-backed.
+The subflow references `openaiChatCompletion`, `getCurrentTime`, and `calculate` from the external catalogs; the same API resources can be reused by additional workflows without duplicating their contracts. SonataFlow does not define an import mechanism for an external `functions` array or expression functions, so the small aliases and two message-assembly expressions remain local to the subflow while the reusable HTTP APIs stay catalog-backed.
 
 Swagger UI is available at http://localhost:8080/q/swagger-ui/ while the application is running.
 
