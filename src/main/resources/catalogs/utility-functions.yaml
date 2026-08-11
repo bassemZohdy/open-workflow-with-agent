@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: Reusable Utility Functions Catalog
+  version: '1.0.0'
+  description: Local reusable time and calculator functions exposed as OpenAPI operations.
+servers:
+  - url: /
+paths:
+  /functions/time:
+    get:
+      operationId: getCurrentTime
+      summary: Get the current time
+      parameters:
+        - name: timezone
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current time
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /functions/calculator:
+    post:
+      operationId: calculate
+      summary: Evaluate an arithmetic expression
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expression]
+              properties:
+                expression:
+                  type: string
+      responses:
+        '200':
+          description: Calculation result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true

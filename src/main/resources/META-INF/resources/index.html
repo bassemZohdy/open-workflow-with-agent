@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SonataFlow Debug Console</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+    body { margin: 0; background: #10151d; color: #e8edf5; }
+    main { max-width: 1080px; margin: auto; padding: 32px 20px 56px; }
+    header { display: flex; justify-content: space-between; gap: 20px; align-items: baseline; margin-bottom: 24px; }
+    h1 { margin: 0; font-size: 1.8rem; } h2 { font-size: 1.05rem; margin-top: 0; }
+    .muted { color: #9ca9bb; } .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { background: #18212d; border: 1px solid #2b394b; border-radius: 10px; padding: 18px; }
+    label { display: block; color: #b8c4d4; font-size: .85rem; margin: 12px 0 6px; }
+    input, textarea { box-sizing: border-box; width: 100%; border: 1px solid #3a4b61; border-radius: 6px; padding: 9px; background: #0f151d; color: #f5f7fa; font: inherit; }
+    textarea { min-height: 150px; resize: vertical; }
+    button, a { display: inline-block; border: 0; border-radius: 6px; padding: 9px 13px; margin: 14px 8px 0 0; background: #3b82f6; color: white; text-decoration: none; cursor: pointer; font: inherit; }
+    button.secondary, a.secondary { background: #334155; } button:disabled { opacity: .6; cursor: wait; }
+    pre { min-height: 240px; max-height: 520px; overflow: auto; white-space: pre-wrap; background: #0b1017; border-radius: 6px; padding: 12px; color: #c7f9cc; }
+    .status { padding: 8px 10px; border-radius: 6px; background: #263449; } .ok { color: #86efac; } .bad { color: #fca5a5; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } header { display: block; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>SonataFlow Debug Console</h1><div class="muted">Lightweight local workflow administration</div></div>
+    <div id="health" class="status">Checking runtime…</div>
+  </header>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Invoke workflow</h2>
+      <label for="workflow">Workflow endpoint</label>
+      <input id="workflow" value="llm_tool_agent" autocomplete="off">
+      <label for="message">User message</label>
+      <textarea id="message">Reply with exactly: hello from the debug console</textarea>
+      <div class="grid">
+        <div><label for="temperature">Temperature</label><input id="temperature" type="number" step="0.1" value="0"></div>
+        <div><label for="tokens">Max tokens</label><input id="tokens" type="number" value="64"></div>
+      </div>
+      <button id="invoke">Run workflow</button><button id="clear" class="secondary">Clear output</button>
+    </div>
+
+    <div class="card">
+      <h2>Runtime links</h2>
+      <p class="muted">Use these endpoints for diagnosis and API exploration.</p>
+      <a class="secondary" href="/q/health" target="_blank" rel="noreferrer">Health</a>
+      <a class="secondary" href="/q/openapi" target="_blank" rel="noreferrer">OpenAPI</a>
+      <a class="secondary" href="/q/swagger-ui/" target="_blank" rel="noreferrer">Swagger UI</a>
+      <label>Configured model</label><div class="status">kimi-k2.5</div>
+      <label>Provider endpoint</label><div id="provider" class="status">Configured by LITELLM_BASE_URL</div>
+      <p class="muted">API keys are never displayed by this console.</p>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Execution result</h2>
+    <pre id="output">No workflow execution yet.</pre>
+  </section>
+</main>
+<script>
+  const output = document.getElementById('output');
+  const health = document.getElementById('health');
+  const invoke = document.getElementById('invoke');
+  const pretty = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+
+  async function checkHealth() {
+    try {
+      const response = await fetch('/q/health');
+      health.textContent = response.ok ? 'Runtime healthy' : `Health HTTP ${response.status}`;
+      health.className = `status ${response.ok ? 'ok' : 'bad'}`;
+    } catch (error) { health.textContent = 'Runtime unavailable'; health.className = 'status bad'; }
+  }
+
+  invoke.onclick = async () => {
+    invoke.disabled = true; output.textContent = 'Executing…';
+    const endpoint = document.getElementById('workflow').value.trim();
+    const body = { messages: [{ role: 'user', content: document.getElementById('message').value }],
+      temperature: Number(document.getElementById('temperature').value), max_tokens: Number(document.getElementById('tokens').value) };
+    try {
+      const response = await fetch(`/${encodeURIComponent(endpoint)}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+      const content = await response.text();
+      let parsed; try { parsed = JSON.parse(content); } catch (_) { parsed = content; }
+      output.textContent = `HTTP ${response.status}\n\n${pretty(parsed)}`;
+    } catch (error) { output.textContent = `Request failed\n\n${error}`; }
+    finally { invoke.disabled = false; checkHealth(); }
+  };
+  document.getElementById('clear').onclick = () => output.textContent = 'No workflow execution yet.';
+  checkHealth();
+</script>
+</body>
+</html>

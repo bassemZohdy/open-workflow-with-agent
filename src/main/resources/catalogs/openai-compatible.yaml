@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: OpenAI Compatible API Catalog
+  version: '1.0.0'
+  description: Reusable OpenAI-compatible chat completion and embeddings operations.
+servers:
+  - url: /
+paths:
+  /chat/completions:
+    post:
+      operationId: chatCompletions
+      summary: Create a chat completion
+      security:
+        - litellm-bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: Chat completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+  /embeddings:
+    post:
+      operationId: createEmbeddings
+      summary: Create embeddings
+      security:
+        - litellm-bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddingRequest'
+      responses:
+        '200':
+          description: Embedding response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingResponse'
+components:
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      required: [model, messages]
+      properties:
+        model:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        temperature:
+          type: number
+          format: double
+        max_tokens:
+          type: integer
+        stream:
+          type: boolean
+          default: false
+        tools:
+          type: array
+          description: Tools that the model may call.
+          items:
+            type: object
+            additionalProperties: true
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant, tool]
+        content:
+          type: string
+        name:
+          type: string
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        usage:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    EmbeddingRequest:
+      type: object
+      required: [model, input]
+      properties:
+        model:
+          type: string
+        input:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+    EmbeddingResponse:
+      type: object
+      additionalProperties: true
+  securitySchemes:
+    litellm-bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
