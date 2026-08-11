@@ -27,7 +27,7 @@ oc apply -f deploy/litellm-credentials.yaml -n "$NAMESPACE"
 ## Deploy and test
 
 ```bash
-oc apply -f deploy/sonataflow.yaml -n "$NAMESPACE"
+oc apply -k deploy -n "$NAMESPACE"
 oc get sonataflow,sonataflowbuild,pods -n "$NAMESPACE"
 oc expose svc/llm-tool-agent -n "$NAMESPACE"
 WORKFLOW_SVC=$(oc get route/llm-tool-agent -n "$NAMESPACE" -o jsonpath='{.spec.host}')
@@ -36,7 +36,8 @@ curl -X POST "http://${WORKFLOW_SVC}/llm_tool_agent" \
   -d '{"messages":[{"role":"user","content":"Reply with exactly: sonataflow-openshift-ok"}],"temperature":0,"max_tokens":16}'
 ```
 
-The CR flow must remain identical to the workflow embedded in the image. The external OpenAPI
-catalogs are included in that image under `src/main/resources/catalogs`, so the runtime can
-resolve both the LLM and utility catalog references imported by `llm_tool_agent`. The tool loop itself is managed by the
-SonataFlow YAML workflow; no Java agent service is required.
+The parent flow is defined in `sonataflow.yaml`; the reusable `agent_loop` subflow is packaged
+into the `llm-tool-agent-resources` ConfigMap by `kustomization.yaml`. The external OpenAPI
+catalogs are included in the image under `src/main/resources/catalogs`, so the runtime can
+resolve both the LLM and utility catalog references. The tool loop itself is managed by the
+SonataFlow YAML subflow; no Java agent service is required.
