@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: Agent Output Guardrails Catalog
+  version: '1.0.0'
+  description: Reusable OpenAPI catalog for JSON schema validation and output safety verification.
+servers:
+  - url: /
+paths:
+  /functions/guardrails/validate:
+    post:
+      operationId: validateOutput
+      summary: Validate LLM response against target guardrail schema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                expected_format:
+                  type: string
+                  default: json
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true

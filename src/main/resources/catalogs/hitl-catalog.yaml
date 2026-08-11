@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: Human-in-the-Loop (HITL) Approval Catalog
+  version: '1.0.0'
+  description: Reusable OpenAPI catalog for requesting human review, approval gating, and status verification.
+servers:
+  - url: /
+paths:
+  /functions/hitl/request:
+    post:
+      operationId: requestApproval
+      summary: Request human approval for a sensitive tool action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action_name, description]
+              properties:
+                action_name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Approval request created
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /functions/hitl/approve:
+    post:
+      operationId: approveRequest
+      summary: Approve or reject a pending HITL request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, approved]
+              properties:
+                request_id:
+                  type: string
+                approved:
+                  type: boolean
+      responses:
+        '200':
+          description: Approval decision recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /functions/hitl/status:
+    get:
+      operationId: getApprovalStatus
+      summary: Check status of a pending HITL approval request
+      parameters:
+        - name: request_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approval status response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true

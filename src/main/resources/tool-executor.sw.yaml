@@ -2,7 +2,7 @@ id: tool_executor
 version: '1.0'
 specVersion: '0.8'
 name: Tool Executor
-description: Reusable sub-flow for dispatching tool calls to OpenAPI resource catalogs (Utilities, MCP, A2A)
+description: Reusable sub-flow for dispatching tool calls to OpenAPI resource catalogs (Utilities, MCP, A2A, Memory, HITL, Guardrails)
 start: Route Tool Call
 
 extensions:
@@ -11,6 +11,9 @@ extensions:
       utilityCatalog: classpath:/catalogs/utility-functions.yaml
       mcpCatalog: classpath:/catalogs/mcp-catalog.yaml
       a2aCatalog: classpath:/catalogs/a2a-catalog.yaml
+      memoryCatalog: classpath:/catalogs/memory-catalog.yaml
+      hitlCatalog: classpath:/catalogs/hitl-catalog.yaml
+      guardrailsCatalog: classpath:/catalogs/guardrails-catalog.yaml
 
 functions:
   - name: getCurrentTime
@@ -21,6 +24,16 @@ functions:
     operation: mcpCatalog#callMcpTool
   - name: delegateToAgent
     operation: a2aCatalog#delegateToAgent
+  - name: getMemory
+    operation: memoryCatalog#getMemory
+  - name: setMemory
+    operation: memoryCatalog#setMemory
+  - name: searchMemory
+    operation: memoryCatalog#searchMemory
+  - name: requestApproval
+    operation: hitlCatalog#requestApproval
+  - name: validateOutput
+    operation: guardrailsCatalog#validateOutput
 
 states:
   - name: Route Tool Call
@@ -34,6 +47,16 @@ states:
         transition: Execute MCP Tool
       - condition: '${ .choices[0].message.tool_calls[0].function.name == "a2a_delegate" }'
         transition: Execute A2A Delegation
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "memory_get" }'
+        transition: Execute Memory Get
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "memory_set" }'
+        transition: Execute Memory Set
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "memory_search" }'
+        transition: Execute Memory Search
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "hitl_request" }'
+        transition: Execute HITL Request
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "guardrail_validate" }'
+        transition: Execute Guardrail Validation
     defaultCondition:
       transition: Unsupported Tool
 
@@ -83,6 +106,70 @@ states:
           arguments:
             target_agent: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .target_agent }'
             prompt: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .prompt }'
+        actionDataFilter:
+          toStateData: '.tool_result'
+    end: true
+
+  - name: Execute Memory Get
+    type: operation
+    actions:
+      - name: Get Memory Value
+        functionRef:
+          refName: getMemory
+          arguments:
+            key: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .key }'
+        actionDataFilter:
+          toStateData: '.tool_result'
+    end: true
+
+  - name: Execute Memory Set
+    type: operation
+    actions:
+      - name: Set Memory Value
+        functionRef:
+          refName: setMemory
+          arguments:
+            key: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .key }'
+            value: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .value }'
+        actionDataFilter:
+          toStateData: '.tool_result'
+    end: true
+
+  - name: Execute Memory Search
+    type: operation
+    actions:
+      - name: Search Memory Store
+        functionRef:
+          refName: searchMemory
+          arguments:
+            query: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .query }'
+            top_k: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .top_k // 3 }'
+        actionDataFilter:
+          toStateData: '.tool_result'
+    end: true
+
+  - name: Execute HITL Request
+    type: operation
+    actions:
+      - name: Request HITL Approval
+        functionRef:
+          refName: requestApproval
+          arguments:
+            action_name: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .action_name }'
+            description: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .description // "Human approval required" }'
+        actionDataFilter:
+          toStateData: '.tool_result'
+    end: true
+
+  - name: Execute Guardrail Validation
+    type: operation
+    actions:
+      - name: Validate Guardrail Content
+        functionRef:
+          refName: validateOutput
+          arguments:
+            content: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .content }'
+            expected_format: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .expected_format // "json" }'
         actionDataFilter:
           toStateData: '.tool_result'
     end: true

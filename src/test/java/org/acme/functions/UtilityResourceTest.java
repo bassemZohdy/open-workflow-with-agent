@@ -1,6 +1,7 @@
 package org.acme.functions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -143,5 +144,72 @@ class UtilityResourceTest {
         assertThrows(BadRequestException.class, () -> resource.delegateToAgent(null));
         assertThrows(BadRequestException.class, () -> resource.delegateToAgent(Map.of("target_agent", "researcher_agent")));
         assertThrows(BadRequestException.class, () -> resource.delegateToAgent(Map.of("prompt", "Analyze repository")));
+    }
+
+    // Short/Long Term Memory Tests
+    @Test
+    void storesAndRetrievesMemory() {
+        Map<String, String> setResp = resource.setMemory(Map.of("key", "user_pref", "value", "dark_mode"));
+        assertEquals("user_pref", setResp.get("key"));
+        assertEquals("stored", setResp.get("status"));
+
+        Map<String, String> getResp = resource.getMemory("user_pref");
+        assertEquals("user_pref", getResp.get("key"));
+        assertEquals("dark_mode", getResp.get("value"));
+    }
+
+    @Test
+    void searchesMemoryStore() {
+        Map<String, Object> response = resource.searchMemory(Map.of("query", "user preferences"));
+        assertEquals("user preferences", response.get("query"));
+        assertNotNull(response.get("matches"));
+    }
+
+    @Test
+    void rejectsMemoryOperationsWithMissingInput() {
+        assertThrows(BadRequestException.class, () -> resource.getMemory(null));
+        assertThrows(BadRequestException.class, () -> resource.getMemory(""));
+        assertThrows(BadRequestException.class, () -> resource.setMemory(null));
+        assertThrows(BadRequestException.class, () -> resource.setMemory(Map.of("key", "test")));
+        assertThrows(BadRequestException.class, () -> resource.searchMemory(null));
+    }
+
+    // HITL Tests
+    @Test
+    void createsAndApprovesHitlRequest() {
+        Map<String, Object> reqResp = resource.requestApproval(Map.of("action_name", "deploy_prod", "description", "Deploy release 1.0"));
+        String requestId = String.valueOf(reqResp.get("request_id"));
+        assertNotNull(requestId);
+        assertEquals("approved", reqResp.get("status"));
+
+        Map<String, Object> appResp = resource.approveRequest(Map.of("request_id", requestId, "approved", false));
+        assertEquals("denied", appResp.get("status"));
+
+        Map<String, Object> statusResp = resource.getApprovalStatus(requestId);
+        assertEquals("approved", statusResp.get("status"));
+    }
+
+    @Test
+    void rejectsHitlRequestsWithMissingInput() {
+        assertThrows(BadRequestException.class, () -> resource.requestApproval(null));
+        assertThrows(BadRequestException.class, () -> resource.requestApproval(Collections.emptyMap()));
+        assertThrows(BadRequestException.class, () -> resource.approveRequest(null));
+        assertThrows(BadRequestException.class, () -> resource.getApprovalStatus(null));
+    }
+
+    // Guardrails Tests
+    @Test
+    void validatesGuardrailContent() {
+        Map<String, Object> validResp = resource.validateOutput(Map.of("content", "{\"status\": \"ok\"}"));
+        assertTrue((Boolean) validResp.get("valid"));
+
+        Map<String, Object> invalidResp = resource.validateOutput(Map.of("content", "INVALID_SCHEMA content"));
+        assertFalse((Boolean) invalidResp.get("valid"));
+    }
+
+    @Test
+    void rejectsGuardrailsWithoutContent() {
+        assertThrows(BadRequestException.class, () -> resource.validateOutput(null));
+        assertThrows(BadRequestException.class, () -> resource.validateOutput(Collections.emptyMap()));
     }
 }

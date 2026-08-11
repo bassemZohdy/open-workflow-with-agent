@@ -7,3 +7,4 @@ configMapGenerator:
     files:
       - agent-loop.sw.yaml=../src/main/resources/agent-loop.sw.yaml
       - tool-executor.sw.yaml=../src/main/resources/tool-executor.sw.yaml
+      - hitl-gate.sw.yaml=../src/main/resources/hitl-gate.sw.yaml

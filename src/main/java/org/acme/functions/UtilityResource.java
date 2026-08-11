@@ -4,6 +4,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
@@ -19,6 +21,8 @@ import org.jboss.logging.Logger;
 @Produces(MediaType.APPLICATION_JSON)
 public class UtilityResource {
     private static final Logger LOG = Logger.getLogger(UtilityResource.class);
+    private final Map<String, String> memoryStore = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Object>> hitlRequests = new ConcurrentHashMap<>();
 
     @GET
     @Path("/time")
@@ -112,6 +116,116 @@ public class UtilityResource {
             "target_agent", targetAgent,
             "status", "completed",
             "delegation_result", "Sub-agent " + targetAgent + " processed prompt: " + prompt
+        );
+    }
+
+    // Short/Long-Term Memory Endpoints
+    @GET
+    @Path("/memory/get")
+    public Map<String, String> getMemory(@QueryParam("key") String key) {
+        if (key == null || key.isBlank()) {
+            throw new BadRequestException("key is required for memory retrieval");
+        }
+        String value = memoryStore.getOrDefault(key, "");
+        LOG.infof("Memory retrieve executed key=%s found=%s", key, !value.isEmpty());
+        return Map.of("key", key, "value", value);
+    }
+
+    @POST
+    @Path("/memory/set")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, String> setMemory(Map<String, String> request) {
+        if (request == null || !request.containsKey("key") || !request.containsKey("value")) {
+            throw new BadRequestException("key and value are required for memory storage");
+        }
+        String key = request.get("key");
+        String value = request.get("value");
+        memoryStore.put(key, value);
+        LOG.infof("Memory set executed key=%s", key);
+        return Map.of("key", key, "status", "stored");
+    }
+
+    @POST
+    @Path("/memory/search")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> searchMemory(Map<String, Object> request) {
+        if (request == null || !request.containsKey("query")) {
+            throw new BadRequestException("query is required for memory search");
+        }
+        String query = String.valueOf(request.get("query"));
+        LOG.infof("Memory search executed query=%s", query);
+        return Map.of(
+            "query", query,
+            "matches", List.of(
+                Map.of("key", "context_summary", "score", 0.95, "value", "Relevant context for " + query)
+            )
+        );
+    }
+
+    // Human-in-the-Loop (HITL) Endpoints
+    @POST
+    @Path("/hitl/request")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> requestApproval(Map<String, String> request) {
+        if (request == null || !request.containsKey("action_name")) {
+            throw new BadRequestException("action_name is required for HITL approval request");
+        }
+        String requestId = UUID.randomUUID().toString();
+        String actionName = request.get("action_name");
+        String description = request.getOrDefault("description", "Human approval required");
+
+        Map<String, Object> approvalRecord = Map.of(
+            "request_id", requestId,
+            "action_name", actionName,
+            "description", description,
+            "status", "approved" // auto-approved in test mock environment
+        );
+        hitlRequests.put(requestId, approvalRecord);
+        LOG.infof("HITL approval requested requestId=%s actionName=%s", requestId, actionName);
+        return approvalRecord;
+    }
+
+    @POST
+    @Path("/hitl/approve")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> approveRequest(Map<String, Object> request) {
+        if (request == null || !request.containsKey("request_id")) {
+            throw new BadRequestException("request_id is required for HITL approval");
+        }
+        String requestId = String.valueOf(request.get("request_id"));
+        boolean approved = Boolean.parseBoolean(String.valueOf(request.getOrDefault("approved", true)));
+        String status = approved ? "approved" : "denied";
+
+        LOG.infof("HITL decision recorded requestId=%s status=%s", requestId, status);
+        return Map.of("request_id", requestId, "status", status);
+    }
+
+    @GET
+    @Path("/hitl/status")
+    public Map<String, Object> getApprovalStatus(@QueryParam("request_id") String requestId) {
+        if (requestId == null || requestId.isBlank()) {
+            throw new BadRequestException("request_id is required for HITL status check");
+        }
+        Map<String, Object> record = hitlRequests.getOrDefault(requestId, Map.of("request_id", requestId, "status", "pending"));
+        LOG.infof("HITL status checked requestId=%s status=%s", requestId, record.get("status"));
+        return record;
+    }
+
+    // Guardrails Output Validation Endpoint
+    @POST
+    @Path("/guardrails/validate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> validateOutput(Map<String, String> request) {
+        if (request == null || !request.containsKey("content")) {
+            throw new BadRequestException("content is required for guardrails validation");
+        }
+        String content = request.get("content");
+        boolean valid = !content.contains("INVALID_SCHEMA") && !content.contains("FORBIDDEN");
+        LOG.infof("Guardrails validate executed valid=%s", valid);
+        return Map.of(
+            "valid", valid,
+            "content", content,
+            "violations", valid ? List.of() : List.of("Guardrail validation rule failed")
         );
     }
 
