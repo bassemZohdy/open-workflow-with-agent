@@ -10,9 +10,9 @@ import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 @QuarkusTestResource(MockCatalogResource.class)
-class YamlToolWorkflowTest {
+class AgentLoopSubflowTest {
     @Test
-    void yamlWorkflowExecutesCalculatorToolAndReturnsFinalAnswer() {
+    void parentWorkflowExecutesAgentLoopSubflowAndReturnsFinalAnswer() {
         given()
                 .contentType("application/json")
                 .body("{\"messages\":[{\"role\":\"user\",\"content\":\"calculate 7 * 6\"}],\"temperature\":0,\"max_tokens\":32}")

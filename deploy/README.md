@@ -1,6 +1,8 @@
 # OpenShift Serverless Logic deployment
 
-This deployment uses the OpenShift Serverless Logic 1.38.0 GitOps profile.
+This deployment uses the OpenShift Serverless Logic 1.38.0 GitOps profile. The public
+`llm_tool_agent` flow is defined in the SonataFlow CR, while the reusable `agent_loop` subflow
+is generated into a ConfigMap by Kustomize.
 
 ## Build and push
 
@@ -17,8 +19,8 @@ image that was pushed to the registry.
 
 ## Configure credentials
 
-Copy `litellm-credentials.example.yaml`, replace both values, and apply it to the
-workflow namespace. Do not commit the populated Secret:
+Copy `litellm-credentials.example.yaml`, rename it to `litellm-credentials.yaml`, replace both
+values, and apply it to the workflow namespace. Do not commit the populated Secret:
 
 ```bash
 oc apply -f deploy/litellm-credentials.yaml -n "$NAMESPACE"
@@ -36,8 +38,8 @@ curl -X POST "http://${WORKFLOW_SVC}/llm_tool_agent" \
   -d '{"messages":[{"role":"user","content":"Reply with exactly: sonataflow-openshift-ok"}],"temperature":0,"max_tokens":16}'
 ```
 
-The parent flow is defined in `sonataflow.yaml`; the reusable `agent_loop` subflow is packaged
-into the `llm-tool-agent-resources` ConfigMap by `kustomization.yaml`. The external OpenAPI
-catalogs are included in the image under `src/main/resources/catalogs`, so the runtime can
-resolve both the LLM and utility catalog references. The tool loop itself is managed by the
-SonataFlow YAML subflow; no Java agent service is required.
+The parent flow is defined in `sonataflow.yaml`; `kustomization.yaml` packages
+`src/main/resources/agent-loop.sw.yaml` into the `llm-tool-agent-resources` ConfigMap. The
+external OpenAPI catalogs are included in the image under `src/main/resources/catalogs`, so the
+runtime can resolve both the LLM and utility catalog references. No Java agent service is
+required.
