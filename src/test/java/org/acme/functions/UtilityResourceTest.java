@@ -212,4 +212,18 @@ class UtilityResourceTest {
         assertThrows(BadRequestException.class, () -> resource.validateOutput(null));
         assertThrows(BadRequestException.class, () -> resource.validateOutput(Collections.emptyMap()));
     }
+
+    // Multi-Provider Fallback Tests
+    @Test
+    void executesFallbackChatCompletions() {
+        Map<String, Object> response = resource.fallbackChatCompletions(Map.of("messages", List.of(Map.of("role", "user", "content", "hi"))));
+        assertEquals("openai", response.get("provider"));
+        assertNotNull(response.get("choices"));
+    }
+
+    @Test
+    void rejectsFallbackWithoutMessages() {
+        assertThrows(BadRequestException.class, () -> resource.fallbackChatCompletions(null));
+        assertThrows(BadRequestException.class, () -> resource.fallbackChatCompletions(Collections.emptyMap()));
+    }
 }

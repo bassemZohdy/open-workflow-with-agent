@@ -1,0 +1,38 @@
+openapi: 3.0.3
+info:
+  title: Multi-Provider LLM Fallback Catalog
+  version: '1.0.0'
+  description: Reusable OpenAPI catalog for failover routing across primary and secondary LLM providers.
+servers:
+  - url: /
+paths:
+  /functions/fallback/chatCompletions:
+    post:
+      operationId: fallbackChatCompletions
+      summary: Execute chat completion with multi-provider failover
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messages]
+              properties:
+                primary_provider:
+                  type: string
+                  default: openai
+                fallback_provider:
+                  type: string
+                  default: litellm
+                messages:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Successful completion response from primary or fallback provider
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true

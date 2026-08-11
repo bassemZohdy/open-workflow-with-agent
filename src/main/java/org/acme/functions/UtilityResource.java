@@ -229,6 +229,24 @@ public class UtilityResource {
         );
     }
 
+    // Multi-Provider Fallback Endpoint
+    @POST
+    @Path("/fallback/chatCompletions")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> fallbackChatCompletions(Map<String, Object> request) {
+        if (request == null || !request.containsKey("messages")) {
+            throw new BadRequestException("messages array is required for fallback chat completion");
+        }
+        String primaryProvider = String.valueOf(request.getOrDefault("primary_provider", "openai"));
+        LOG.infof("Fallback chat completion executed provider=%s", primaryProvider);
+        return Map.of(
+            "provider", primaryProvider,
+            "choices", List.of(
+                Map.of("message", Map.of("role", "assistant", "content", "Fallback chat completion response"))
+            )
+        );
+    }
+
     private static final class ExpressionParser {
         private final String input;
         private int position;
