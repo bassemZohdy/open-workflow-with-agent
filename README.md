@@ -1,10 +1,10 @@
 # Agentic OpenWorkflow Specification Proof-of-Concept
 
-This project demonstrates extending the **OpenWorkflow specification** (CNCF Serverless Workflow standard) to natively support **Agentic AI capabilities**. It uses **SonataFlow** purely as a concrete reference implementation to validate and prove these OpenWorkflow spec extensions.
+This project demonstrates extending the **OpenWorkflow specification** (CNCF Serverless Workflow standard) to natively support **all Canonical Agentic AI Patterns**. It uses **SonataFlow** purely as a concrete reference implementation to validate and prove these OpenWorkflow spec extensions.
 
 The architecture introduces two key extensions to standard serverless workflow engines:
-1. **Catalog Functions**: Modular, externalized OpenAPI specification registries (`catalogs`) for LLM providers and domain utility endpoints.
-2. **Agentic Sub-Flows**: Modular workflow subflows (`subFlowRef`) that encapsulate autonomous tool reasoning loops, prompt state management, function call routing, and iteration guardrails.
+1. **Catalog Functions**: Modular, externalized OpenAPI specification registries (`catalogs`) for LLM providers, domain tools, Model Context Protocol (MCP), Agent-to-Agent (A2A) delegation, Short/Long-Term Memory, Human-in-the-Loop (HITL), Output Guardrails, Multi-Provider Fallback, and Task Planning.
+2. **Agentic Sub-Flows**: Modular workflow subflows (`subFlowRef`) encapsulating canonical agent patterns (Autonomous Reasoning, Tool Dispatching, HITL Gating, Parallel Fan-Out, Self-Reflection Critique, Task Decomposition, Sequential Chaining, and Supervisor Delegation).
 
 ---
 
@@ -12,28 +12,52 @@ The architecture introduces two key extensions to standard serverless workflow e
 
 ```text
 OpenWorkflow Entry Point (llm_tool_agent)
- └── Reusable Agent Sub-Flow (agent_loop)
-     ├── Catalog Function: openaiChatCompletion (OpenAPI Catalog)
-     ├── Generic Appender: appendToolResult     (Unified Expression Function)
-     ├── Tool Executor Sub-Flow (tool_executor)
-     │   ├── Utility Catalog Functions: getCurrentTime, calculate
-     │   ├── MCP Catalog Functions: callMcpTool, listMcpTools
-     │   └── A2A Catalog Functions: delegateToAgent, listAgents
-     ├── State Machine & Tool Call Router
-     └── Safety Guardrails: Bounded Loop (max 5 tool iterations)
+ ├── Reusable Reasoning Sub-Flow (agent_loop)
+ │   ├── OpenAI Catalog: openaiChatCompletion
+ │   ├── Generic Appender: appendToolResult
+ │   └── Tool Executor Sub-Flow (tool_executor)
+ │       ├── Utility Catalog: getCurrentTime, calculate
+ │       ├── MCP Catalog: callMcpTool, listMcpTools
+ │       ├── A2A Catalog: delegateToAgent, listAgents
+ │       ├── Memory Catalog: getMemory, setMemory, searchMemory
+ │       ├── HITL Catalog: requestApproval, approveRequest, getApprovalStatus
+ │       └── Guardrails Catalog: validateOutput
+ ├── Human-in-the-Loop Approval Gate (hitl_gate)
+ ├── Parallel Multi-Agent Fan-Out Sub-Flow (parallel_agent)
+ ├── Self-Reflection & Critique Loop Sub-Flow (reflection_agent)
+ ├── Planning & Task Decomposition Sub-Flow (plan_agent)
+ ├── Sequential Chaining Pipeline Sub-Flow (chain_agent)
+ └── Supervisor / Orchestrator-Worker Router (supervisor_agent)
 ```
 
-### Core Components
+---
+
+## Canonical Agentic Design Patterns
+
+| Pattern | Description | Workflow Sub-Flow | OpenAPI Catalog |
+| :--- | :--- | :--- | :--- |
+| **1. Autonomous Reasoning Loop** | Multi-turn tool execution loop with iteration limits | [`agent-loop.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/agent-loop.sw.yaml) | [`openai-compatible.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/openai-compatible.yaml) |
+| **2. Dynamic Tool Execution** | Generic catalog tool router | [`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml) | [`utility-functions.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/utility-functions.yaml) |
+| **3. Model Context Protocol (MCP)** | JSON-RPC/OpenAPI tool discovery & call | [`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml) | [`mcp-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/mcp-catalog.yaml) |
+| **4. Agent-to-Agent (A2A)** | Peer & sub-agent delegation | [`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml) | [`a2a-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/a2a-catalog.yaml) |
+| **5. Short & Long-Term Memory** | Context buffer, KV store & vector search | [`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml) | [`memory-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/memory-catalog.yaml) |
+| **6. Human-in-the-Loop (HITL)** | Approval gating for sensitive actions | [`hitl-gate.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/hitl-gate.sw.yaml) | [`hitl-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/hitl-catalog.yaml) |
+| **7. Output Guardrails** | Schema validation & output safety checks | [`reflection-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/reflection-agent.sw.yaml) | [`guardrails-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/guardrails-catalog.yaml) |
+| **8. Parallel Fan-Out / Fan-In** | Concurrent multi-agent execution | [`parallel-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/parallel-agent.sw.yaml) | [`a2a-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/a2a-catalog.yaml) |
+| **9. Self-Reflection & Critique** | Generation -> Critique -> Refinement | [`reflection-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/reflection-agent.sw.yaml) | [`guardrails-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/guardrails-catalog.yaml) |
+| **10. Planning & Decomposition** | Goal decomposition into task plans | [`plan-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/plan-agent.sw.yaml) | [`planner-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/planner-catalog.yaml) |
+| **11. Sequential Pipeline** | Step-by-step agent chaining | [`chain-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/chain-agent.sw.yaml) | [`a2a-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/a2a-catalog.yaml) |
+| **12. Supervisor / Worker Router** | Dynamic worker agent task routing | [`supervisor-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/supervisor-agent.sw.yaml) | [`a2a-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/a2a-catalog.yaml) |
+| **13. Multi-Provider Fallback** | Provider failover routing | [`agent-loop.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/agent-loop.sw.yaml) | [`fallback-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/fallback-catalog.yaml) |
+
+---
+
+## Core Components
 
 * **Parent Workflow** ([`llm-tool-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/llm-tool-agent.sw.yaml)): Serves as the public HTTP entry point delegating directly to `agent_loop`.
 * **Agent Loop Sub-Flow** ([`agent-loop.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/agent-loop.sw.yaml)): Manages prompt assembly, LLM execution, generic message formatting, and iteration limits.
-* **Tool Executor Sub-Flow** ([`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml)): Dedicated sub-flow routing execution across Utility, MCP, and A2A catalog functions.
-* **OpenAI Catalog** ([`openai-compatible.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/openai-compatible.yaml)): OpenAPI specification defining chat completions and embeddings endpoints.
-* **Utility Catalog** ([`utility-functions.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/utility-functions.yaml)): OpenAPI specification defining utility tool operations (`/functions/time`, `/functions/calculator`).
-* **MCP Catalog** ([`mcp-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/mcp-catalog.yaml)): OpenAPI specification for Model Context Protocol (MCP) tool discovery (`/functions/mcp/tools`) and execution (`/functions/mcp/call`).
-* **A2A Catalog** ([`a2a-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/a2a-catalog.yaml)): OpenAPI specification for Agent-to-Agent sub-agent task delegation (`/functions/a2a/delegate`) and directory lookup (`/functions/a2a/agents`).
-* **Local Utility Service** ([`UtilityResource`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/java/org/acme/functions/UtilityResource.java)): JAX-RS endpoints providing local execution for Utility, MCP, and A2A catalog operations.
-
+* **Tool Executor Sub-Flow** ([`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml)): Dedicated sub-flow routing execution across Utility, MCP, A2A, Memory, HITL, and Guardrails catalog functions.
+* **Local REST Utility Service** ([`UtilityResource`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/java/org/acme/functions/UtilityResource.java)): JAX-RS endpoints providing local execution for all catalog operations.
 
 ---
 
@@ -48,30 +72,14 @@ extensions:
     definitions:
       openaiCatalog: classpath:/catalogs/openai-compatible.yaml
       utilityCatalog: classpath:/catalogs/utility-functions.yaml
-
-functions:
-  - name: openaiChatCompletion
-    operation: openaiCatalog#chatCompletions
-  - name: getCurrentTime
-    operation: utilityCatalog#getCurrentTime
-  - name: calculate
-    operation: utilityCatalog#calculate
+      mcpCatalog: classpath:/catalogs/mcp-catalog.yaml
+      a2aCatalog: classpath:/catalogs/a2a-catalog.yaml
+      memoryCatalog: classpath:/catalogs/memory-catalog.yaml
+      hitlCatalog: classpath:/catalogs/hitl-catalog.yaml
+      guardrailsCatalog: classpath:/catalogs/guardrails-catalog.yaml
+      fallbackCatalog: classpath:/catalogs/fallback-catalog.yaml
+      plannerCatalog: classpath:/catalogs/planner-catalog.yaml
 ```
-
-### 2. Sub-Flow Agent Reasoning Loop
-Autonomous agent loops are packaged as reusable OpenWorkflow sub-flows. The parent workflow invokes the sub-flow, which executes a bounded execution loop:
-
-1. **Inject Agent Defaults**: Initializes tool schemas, max tool iteration limits, and default parameters.
-2. **Call LLM**: Dispatches the conversation payload to the model endpoint configured in the OpenAI Catalog.
-3. **Inspect LLM Response**: Evaluates tool calls returned by the model (`choices[0].message.tool_calls`).
-4. **Execute Tool & Append Result**: Invokes target catalog functions, formats tool output into OpenAI message format, appends to prompt history, and increments iteration counter.
-5. **Termination Guardrails**: Automatically terminates when the LLM outputs a final response (`tool_calls` empty) or reaches `max_tool_iterations` (default: 5).
-
----
-
-## SonataFlow Reference Implementation
-
-[SonataFlow](https://sonataflow.org/) (formerly Kogito Serverless Workflow) is utilized as the reference execution engine to prove this OpenWorkflow specification model. SonataFlow resolves OpenAPI definitions, compiles declarative YAML states, and executes Quarkus-backed microservice containers without requiring custom Java orchestration code.
 
 ---
 
@@ -97,8 +105,6 @@ mvn clean quarkus:dev
 
 ### Invoke the Agent Workflow
 
-Invoke the public parent workflow endpoint with a prompt requiring tool execution:
-
 ```bash
 curl -X POST http://localhost:8080/llm_tool_agent \
   -H 'Content-Type: application/json' \
@@ -108,10 +114,6 @@ curl -X POST http://localhost:8080/llm_tool_agent \
     "max_tokens": 64
   }'
 ```
-
-### Management Endpoints
-* **SonataFlow Management Console**: [http://localhost:8080/](http://localhost:8080/)
-* **Swagger UI**: [http://localhost:8080/q/swagger-ui/](http://localhost:8080/q/swagger-ui/)
 
 ---
 
@@ -124,7 +126,7 @@ mvn clean test
 ```
 
 The test suite covers:
-* [`UtilityResourceTest`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/UtilityResourceTest.java): Comprehensive unit tests (44 test runs) covering arithmetic operator precedence, negative/decimal numbers, whitespace handling, null/blank validation, multi-timezone resolution (`Asia/Dubai`, `America/New_York`, `Europe/London`, `UTC`, `GMT`, `UTC+4`, `UTC-5`), MCP tool discovery/execution (`web_search`, `read_resource`, `database_query`), A2A sub-agent delegation (`researcher_agent`, `coder_agent`, `reviewer_agent`), Memory storage/retrieval/search, Human-in-the-Loop approval requests/decisions, Output Guardrails JSON validation, Multi-Provider LLM Fallback chat completions, and Task Planning/Decomposition.
+* [`UtilityResourceTest`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/UtilityResourceTest.java): Comprehensive unit tests (44 test runs) covering arithmetic operator precedence, negative/decimal numbers, whitespace handling, null/blank validation, multi-timezone resolution, MCP tool discovery/execution, A2A sub-agent delegation, Memory storage/retrieval/search, HITL approval requests/decisions, Output Guardrails JSON validation, Multi-Provider LLM Fallback chat completions, and Task Planning/Decomposition.
 * [`AgentLoopSubflowTest`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/AgentLoopSubflowTest.java): End-to-end integration tests using [`OpenAiMockApiResource`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/OpenAiMockApiResource.java) supporting multi-turn tool call handling (`calculate`, `get_current_time`) and direct text completions.
 
 ---
@@ -132,4 +134,3 @@ The test suite covers:
 ## Kubernetes & OpenShift Deployment
 
 Deployments target OpenShift Serverless Logic / Kubernetes using the SonataFlow GitOps profile. See [`deploy/README.md`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/deploy/README.md) for manifest packaging, secrets, and deployment commands.
-
