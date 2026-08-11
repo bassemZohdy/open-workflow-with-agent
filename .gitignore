@@ -1,6 +1,20 @@
+# Maven build output
 target/
+*.class
+
+# Diagnostic logs
 logs/
+*.log
+
+# IDE & OS configuration
 .idea/
 *.iml
 .vscode/
 *.swp
+.DS_Store
+Thumbs.db
+
+# Secrets & Credentials
+deploy/*credentials.yaml
+!deploy/openai-credentials.example.yaml
+!deploy/litellm-credentials.example.yaml

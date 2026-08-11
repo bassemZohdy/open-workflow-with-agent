@@ -9,7 +9,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
-@QuarkusTestResource(MockCatalogResource.class)
+@QuarkusTestResource(OpenAiMockApiResource.class)
 class AgentLoopSubflowTest {
     @Test
     void parentWorkflowExecutesAgentLoopSubflowAndReturnsFinalAnswer() {

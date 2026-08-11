@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Agent-to-Agent (A2A) Delegation Catalog
+  version: '1.0.0'
+  description: Reusable OpenAPI catalog for Agent-to-Agent communication and sub-agent task delegation.
+servers:
+  - url: /
+paths:
+  /functions/a2a/agents:
+    get:
+      operationId: listAgents
+      summary: List registered peer and sub-agents
+      responses:
+        '200':
+          description: List of available sub-agents
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /functions/a2a/delegate:
+    post:
+      operationId: delegateToAgent
+      summary: Delegate a task prompt to a target sub-agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_agent, prompt]
+              properties:
+                target_agent:
+                  type: string
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: Sub-agent execution response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true

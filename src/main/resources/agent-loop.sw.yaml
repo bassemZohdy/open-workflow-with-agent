@@ -2,23 +2,18 @@ id: agent_loop
 version: '1.0'
 specVersion: '0.8'
 name: Agent Loop
-description: Reusable YAML agent loop using OpenAPI resource catalogs
+description: Reusable YAML agent loop using OpenAPI resource catalogs and sub-flow tool execution
 start: Inject Agent Defaults
 
 extensions:
   - extensionid: workflow-uri-definitions
     definitions:
       openaiCatalog: classpath:/catalogs/openai-compatible.yaml
-      utilityCatalog: classpath:/catalogs/utility-functions.yaml
 
 functions:
   - name: openaiChatCompletion
     operation: openaiCatalog#chatCompletions
-  - name: getCurrentTime
-    operation: utilityCatalog#getCurrentTime
-  - name: calculate
-    operation: utilityCatalog#calculate
-  - name: appendTimeToolResult
+  - name: appendToolResult
     type: expression
     operation: >-
       {messages: ((.messages | tojson | fromjson) + [{
@@ -28,21 +23,8 @@ functions:
       },
         {role: "tool",
          tool_call_id: .choices[0].message.tool_calls[0].id,
-         name: "get_current_time",
-         content: ({timezone: .timezone, datetime: .datetime} | tojson)}
-      ]), tool_iterations: (.tool_iterations + 1)}
-  - name: appendCalculatorToolResult
-    type: expression
-    operation: >-
-      {messages: ((.messages | tojson | fromjson) + [{
-        role: .choices[0].message.role,
-        content: (.choices[0].message.content // null),
-        tool_calls: (.choices[0].message.tool_calls | map(.function.arguments |= (if type == "string" then . else tojson end)))
-      },
-        {role: "tool",
-         tool_call_id: .choices[0].message.tool_calls[0].id,
-         name: "calculate",
-         content: ({expression: .expression, result: .result} | tojson)}
+         name: .choices[0].message.tool_calls[0].function.name,
+         content: (.tool_result | tojson)}
       ]), tool_iterations: (.tool_iterations + 1)}
 
 states:
@@ -75,6 +57,35 @@ states:
                   type: string
                   description: Arithmetic expression using numbers, parentheses, +, -, *, and /.
               required: [expression]
+        - type: function
+          function:
+            name: mcp_tool_call
+            description: Execute a tool using the Model Context Protocol (MCP).
+            parameters:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Target MCP tool name.
+                arguments:
+                  type: object
+                  description: Arguments object for the target MCP tool.
+              required: [name]
+        - type: function
+          function:
+            name: a2a_delegate
+            description: Delegate a sub-task prompt to a peer sub-agent.
+            parameters:
+              type: object
+              properties:
+                target_agent:
+                  type: string
+                  description: Target sub-agent ID (e.g., researcher_agent, coder_agent).
+                prompt:
+                  type: string
+                  description: Detailed task instruction prompt for the target sub-agent.
+              required: [target_agent, prompt]
+
     transition: Call LLM
 
   - name: Call LLM
@@ -98,47 +109,24 @@ states:
         transition: Complete
       - condition: '${ .tool_iterations >= .max_tool_iterations }'
         transition: Tool Limit Reached
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "get_current_time" }'
-        transition: Execute Time Tool
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "calculate" }'
-        transition: Execute Calculator Tool
     defaultCondition:
-      transition: Unsupported Tool
+      transition: Execute Tool Subflow
 
-  - name: Execute Time Tool
+  - name: Execute Tool Subflow
     type: operation
     actions:
-      - name: Get Current Time
-        functionRef:
-          refName: getCurrentTime
-          arguments:
-            timezone: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .timezone }'
-    transition: Append Time Tool Result
+      - name: Dispatch Tool Execution
+        subFlowRef: tool_executor
+        actionDataFilter:
+          useResults: true
+    transition: Append Tool Result
 
-  - name: Append Time Tool Result
+  - name: Append Tool Result
     type: operation
     actions:
-      - name: Append Time Messages
+      - name: Append Tool Message
         functionRef:
-          refName: appendTimeToolResult
-    transition: Call LLM
-
-  - name: Execute Calculator Tool
-    type: operation
-    actions:
-      - name: Calculate
-        functionRef:
-          refName: calculate
-          arguments:
-            expression: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .expression }'
-    transition: Append Calculator Tool Result
-
-  - name: Append Calculator Tool Result
-    type: operation
-    actions:
-      - name: Append Calculator Messages
-        functionRef:
-          refName: appendCalculatorToolResult
+          refName: appendToolResult
     transition: Call LLM
 
   - name: Complete
@@ -150,10 +138,4 @@ states:
     type: inject
     data:
       error: Maximum tool iterations reached
-    end: true
-
-  - name: Unsupported Tool
-    type: inject
-    data:
-      error: Unsupported tool requested
     end: true

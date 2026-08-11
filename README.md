@@ -1,45 +1,103 @@
-# SonataFlow LLM Tool Agent
+# Agentic OpenWorkflow Specification Proof-of-Concept
 
-This project is a YAML-first SonataFlow application for an OpenAI-compatible LLM agent. It
-keeps atomic integrations in reusable OpenAPI catalogs and models the multi-step agent loop as
-a YAML subflow.
+This project demonstrates extending the **OpenWorkflow specification** (CNCF Serverless Workflow standard) to natively support **Agentic AI capabilities**. It uses **SonataFlow** purely as a concrete reference implementation to validate and prove these OpenWorkflow spec extensions.
 
-## Architecture
+The architecture introduces two key extensions to standard serverless workflow engines:
+1. **Catalog Functions**: Modular, externalized OpenAPI specification registries (`catalogs`) for LLM providers and domain utility endpoints.
+2. **Agentic Sub-Flows**: Modular workflow subflows (`subFlowRef`) that encapsulate autonomous tool reasoning loops, prompt state management, function call routing, and iteration guardrails.
+
+---
+
+## Architecture Overview
 
 ```text
-llm_tool_agent workflow
-└── agent_loop subflow
-    ├── openaiChatCompletion     OpenAI-compatible catalog function
-    ├── getCurrentTime            Utility catalog function
-    ├── calculate                 Utility catalog function
-    ├── inspect and route tool calls
-    ├── append tool results
-    └── enforce the five-iteration limit
+OpenWorkflow Entry Point (llm_tool_agent)
+ └── Reusable Agent Sub-Flow (agent_loop)
+     ├── Catalog Function: openaiChatCompletion (OpenAPI Catalog)
+     ├── Generic Appender: appendToolResult     (Unified Expression Function)
+     ├── Tool Executor Sub-Flow (tool_executor)
+     │   ├── Utility Catalog Functions: getCurrentTime, calculate
+     │   ├── MCP Catalog Functions: callMcpTool, listMcpTools
+     │   └── A2A Catalog Functions: delegateToAgent, listAgents
+     ├── State Machine & Tool Call Router
+     └── Safety Guardrails: Bounded Loop (max 5 tool iterations)
 ```
 
-The parent workflow is the public HTTP entry point. The [agent loop subflow](src/main/resources/agent-loop.sw.yaml)
-owns orchestration and state transitions. The [OpenAI catalog](src/main/resources/catalogs/openai-compatible.yaml)
-and [utility catalog](src/main/resources/catalogs/utility-functions.yaml) own reusable API contracts.
+### Core Components
 
-The utility APIs are implemented locally by `UtilityResource` at `/functions/time` and
-`/functions/calculator`; they can be deployed as separate services without changing the workflow.
+* **Parent Workflow** ([`llm-tool-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/llm-tool-agent.sw.yaml)): Serves as the public HTTP entry point delegating directly to `agent_loop`.
+* **Agent Loop Sub-Flow** ([`agent-loop.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/agent-loop.sw.yaml)): Manages prompt assembly, LLM execution, generic message formatting, and iteration limits.
+* **Tool Executor Sub-Flow** ([`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml)): Dedicated sub-flow routing execution across Utility, MCP, and A2A catalog functions.
+* **OpenAI Catalog** ([`openai-compatible.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/openai-compatible.yaml)): OpenAPI specification defining chat completions and embeddings endpoints.
+* **Utility Catalog** ([`utility-functions.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/utility-functions.yaml)): OpenAPI specification defining utility tool operations (`/functions/time`, `/functions/calculator`).
+* **MCP Catalog** ([`mcp-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/mcp-catalog.yaml)): OpenAPI specification for Model Context Protocol (MCP) tool discovery (`/functions/mcp/tools`) and execution (`/functions/mcp/call`).
+* **A2A Catalog** ([`a2a-catalog.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/catalogs/a2a-catalog.yaml)): OpenAPI specification for Agent-to-Agent sub-agent task delegation (`/functions/a2a/delegate`) and directory lookup (`/functions/a2a/agents`).
+* **Local Utility Service** ([`UtilityResource`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/java/org/acme/functions/UtilityResource.java)): JAX-RS endpoints providing local execution for Utility, MCP, and A2A catalog operations.
 
-## Run locally
 
-Configure the LiteLLM-compatible endpoint and API key:
+---
+
+## OpenWorkflow Specification Extensions
+
+### 1. Catalog Functions (`workflow-uri-definitions`)
+Standard OpenWorkflow specs are extended to support URI-based catalog imports. Catalogs declare external OpenAPI operations outside the workflow definition, avoiding hardcoded endpoint URLs inside states:
+
+```yaml
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      openaiCatalog: classpath:/catalogs/openai-compatible.yaml
+      utilityCatalog: classpath:/catalogs/utility-functions.yaml
+
+functions:
+  - name: openaiChatCompletion
+    operation: openaiCatalog#chatCompletions
+  - name: getCurrentTime
+    operation: utilityCatalog#getCurrentTime
+  - name: calculate
+    operation: utilityCatalog#calculate
+```
+
+### 2. Sub-Flow Agent Reasoning Loop
+Autonomous agent loops are packaged as reusable OpenWorkflow sub-flows. The parent workflow invokes the sub-flow, which executes a bounded execution loop:
+
+1. **Inject Agent Defaults**: Initializes tool schemas, max tool iteration limits, and default parameters.
+2. **Call LLM**: Dispatches the conversation payload to the model endpoint configured in the OpenAI Catalog.
+3. **Inspect LLM Response**: Evaluates tool calls returned by the model (`choices[0].message.tool_calls`).
+4. **Execute Tool & Append Result**: Invokes target catalog functions, formats tool output into OpenAI message format, appends to prompt history, and increments iteration counter.
+5. **Termination Guardrails**: Automatically terminates when the LLM outputs a final response (`tool_calls` empty) or reaches `max_tool_iterations` (default: 5).
+
+---
+
+## SonataFlow Reference Implementation
+
+[SonataFlow](https://sonataflow.org/) (formerly Kogito Serverless Workflow) is utilized as the reference execution engine to prove this OpenWorkflow specification model. SonataFlow resolves OpenAPI definitions, compiles declarative YAML states, and executes Quarkus-backed microservice containers without requiring custom Java orchestration code.
+
+---
+
+## Running Locally
+
+### Prerequisites
+* JDK 17+
+* Apache Maven 3.9+
+
+### Environment Setup
+Configure your OpenAI-compatible endpoint (such as LiteLLM, Ollama, or vLLM) and API key:
 
 ```bash
-export LITELLM_BASE_URL=http://localhost:4000/v1
-export LITELLM_API_KEY=your-litellm-key
+export OPENAI_BASE_URL=http://localhost:4000/v1
+export OPENAI_API_KEY=your-openai-key
 ```
 
-Start Quarkus Dev Mode:
+### Start Quarkus Dev Mode
 
 ```bash
 mvn clean quarkus:dev
 ```
 
-The default model is `kimi-k2.5`. Invoke the parent workflow:
+### Invoke the Agent Workflow
+
+Invoke the public parent workflow endpoint with a prompt requiring tool execution:
 
 ```bash
 curl -X POST http://localhost:8080/llm_tool_agent \
@@ -51,34 +109,27 @@ curl -X POST http://localhost:8080/llm_tool_agent \
   }'
 ```
 
-The debug console is available at [http://localhost:8080/](http://localhost:8080/). Swagger UI
-is available at [http://localhost:8080/q/swagger-ui/](http://localhost:8080/q/swagger-ui/).
+### Management Endpoints
+* **SonataFlow Management Console**: [http://localhost:8080/](http://localhost:8080/)
+* **Swagger UI**: [http://localhost:8080/q/swagger-ui/](http://localhost:8080/q/swagger-ui/)
 
-When using the packaged runner, stop the JVM before running `mvn clean` or rebuilding the
-package. Quarkus loads application and dependency JARs by path; replacing `target/quarkus-app`
-while it is running can cause `NoSuchFileException` errors.
+---
 
 ## Testing
 
-Run the complete test suite:
+Execute unit and integration tests:
 
 ```bash
 mvn clean test
 ```
 
-The unit tests cover calculator and time behavior. The integration test starts the real parent
-workflow, `agent_loop` subflow, and utility endpoint while mocking only the external LLM API.
-Runtime diagnostics are written to `logs/application.log`.
+The test suite covers:
+* [`UtilityResourceTest`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/UtilityResourceTest.java): Comprehensive unit tests (33 test runs) covering arithmetic operator precedence, negative/decimal numbers, whitespace handling, null/blank validation, multi-timezone resolution (`Asia/Dubai`, `America/New_York`, `Europe/London`, `UTC`, `GMT`, `UTC+4`, `UTC-5`), MCP tool discovery/execution (`web_search`, `read_resource`, `database_query`), and A2A sub-agent delegation (`researcher_agent`, `coder_agent`, `reviewer_agent`).
+* [`AgentLoopSubflowTest`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/AgentLoopSubflowTest.java): End-to-end integration tests using [`OpenAiMockApiResource`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/test/java/org/acme/functions/OpenAiMockApiResource.java) supporting multi-turn tool call handling (`calculate`, `get_current_time`) and direct text completions.
 
-SonataFlow does not provide an import mechanism for an external `functions:` array or expression
-functions. Therefore, the subflow keeps only its function aliases and message-assembly
-expressions locally, while reusable HTTP APIs remain in external catalogs.
+---
 
-## OpenShift Serverless Logic
+## Kubernetes & OpenShift Deployment
 
-The deployment targets the OpenShift Serverless Logic 1.38.0 GitOps profile. The platform
-builder/runtime remains authoritative for Quarkus and KIE versions. Configure `LITELLM_BASE_URL`
-and `LITELLM_API_KEY` through the `litellm-credentials` Secret.
+Deployments target OpenShift Serverless Logic / Kubernetes using the SonataFlow GitOps profile. See [`deploy/README.md`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/deploy/README.md) for manifest packaging, secrets, and deployment commands.
 
-See [deploy/README.md](deploy/README.md) for image build, credentials, subflow resource
-packaging, and deployment commands.

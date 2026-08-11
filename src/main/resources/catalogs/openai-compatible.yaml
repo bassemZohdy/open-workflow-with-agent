@@ -11,7 +11,7 @@ paths:
       operationId: chatCompletions
       summary: Create a chat completion
       security:
-        - litellm-bearer: []
+        - openai-bearer: []
       requestBody:
         required: true
         content:
@@ -30,7 +30,7 @@ paths:
       operationId: createEmbeddings
       summary: Create embeddings
       security:
-        - litellm-bearer: []
+        - openai-bearer: []
       requestBody:
         required: true
         content:
@@ -113,7 +113,7 @@ components:
       type: object
       additionalProperties: true
   securitySchemes:
-    litellm-bearer:
+    openai-bearer:
       type: http
       scheme: bearer
       bearerFormat: API key

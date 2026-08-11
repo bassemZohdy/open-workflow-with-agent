@@ -2,6 +2,7 @@ package org.acme.functions;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.ws.rs.BadRequestException;
@@ -49,6 +50,69 @@ public class UtilityResource {
         } catch (RuntimeException e) {
             throw new BadRequestException("invalid arithmetic expression");
         }
+    }
+
+    // Model Context Protocol (MCP) Tool Endpoints
+    @GET
+    @Path("/mcp/tools")
+    public Map<String, Object> listMcpTools() {
+        LOG.info("MCP tools list requested");
+        return Map.of(
+            "protocol_version", "2024-11-05",
+            "tools", List.of(
+                Map.of("name", "web_search", "description", "Search the web for real-time information"),
+                Map.of("name", "read_resource", "description", "Read an external URI resource or document"),
+                Map.of("name", "database_query", "description", "Execute structured database query")
+            )
+        );
+    }
+
+    @POST
+    @Path("/mcp/call")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> callMcpTool(Map<String, Object> request) {
+        if (request == null || !request.containsKey("name")) {
+            throw new BadRequestException("name is required for MCP tool execution");
+        }
+        String toolName = String.valueOf(request.get("name"));
+        Object arguments = request.getOrDefault("arguments", Map.of());
+        LOG.infof("MCP tool call executed tool=%s arguments=%s", toolName, arguments);
+        return Map.of(
+            "name", toolName,
+            "status", "success",
+            "content", "Executed MCP tool " + toolName + " with arguments " + arguments
+        );
+    }
+
+    // Agent-to-Agent (A2A) Delegation Endpoints
+    @GET
+    @Path("/a2a/agents")
+    public Map<String, Object> listAgents() {
+        LOG.info("A2A agent directory requested");
+        return Map.of(
+            "agents", List.of(
+                Map.of("agent_id", "researcher_agent", "description", "Specialized sub-agent for deep web and code research"),
+                Map.of("agent_id", "coder_agent", "description", "Specialized sub-agent for code generation and refactoring"),
+                Map.of("agent_id", "reviewer_agent", "description", "Specialized sub-agent for code review and verification")
+            )
+        );
+    }
+
+    @POST
+    @Path("/a2a/delegate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> delegateToAgent(Map<String, String> request) {
+        if (request == null || !request.containsKey("target_agent") || !request.containsKey("prompt")) {
+            throw new BadRequestException("target_agent and prompt are required for A2A delegation");
+        }
+        String targetAgent = request.get("target_agent");
+        String prompt = request.get("prompt");
+        LOG.infof("A2A delegation executed target_agent=%s prompt=%s", targetAgent, prompt);
+        return Map.of(
+            "target_agent", targetAgent,
+            "status", "completed",
+            "delegation_result", "Sub-agent " + targetAgent + " processed prompt: " + prompt
+        );
     }
 
     private static final class ExpressionParser {

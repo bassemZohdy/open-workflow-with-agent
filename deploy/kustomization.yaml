@@ -6,3 +6,4 @@ configMapGenerator:
   - name: llm-tool-agent-resources
     files:
       - agent-loop.sw.yaml=../src/main/resources/agent-loop.sw.yaml
+      - tool-executor.sw.yaml=../src/main/resources/tool-executor.sw.yaml

@@ -32,13 +32,14 @@ spec:
     container:
       image: quay.io/example/llm-tool-agent:1.0.0
       env:
-        - name: LITELLM_BASE_URL
+        - name: OPENAI_BASE_URL
           valueFrom:
             secretKeyRef:
-              name: litellm-credentials
-              key: LITELLM_BASE_URL
-        - name: LITELLM_API_KEY
+              name: openai-credentials
+              key: OPENAI_BASE_URL
+        - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
-              name: litellm-credentials
-              key: LITELLM_API_KEY
+              name: openai-credentials
+              key: OPENAI_API_KEY
+

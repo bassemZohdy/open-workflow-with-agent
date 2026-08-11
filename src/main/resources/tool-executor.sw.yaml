@@ -1,0 +1,95 @@
+id: tool_executor
+version: '1.0'
+specVersion: '0.8'
+name: Tool Executor
+description: Reusable sub-flow for dispatching tool calls to OpenAPI resource catalogs (Utilities, MCP, A2A)
+start: Route Tool Call
+
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      utilityCatalog: classpath:/catalogs/utility-functions.yaml
+      mcpCatalog: classpath:/catalogs/mcp-catalog.yaml
+      a2aCatalog: classpath:/catalogs/a2a-catalog.yaml
+
+functions:
+  - name: getCurrentTime
+    operation: utilityCatalog#getCurrentTime
+  - name: calculate
+    operation: utilityCatalog#calculate
+  - name: callMcpTool
+    operation: mcpCatalog#callMcpTool
+  - name: delegateToAgent
+    operation: a2aCatalog#delegateToAgent
+
+states:
+  - name: Route Tool Call
+    type: switch
+    dataConditions:
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "get_current_time" }'
+        transition: Execute Time Tool
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "calculate" }'
+        transition: Execute Calculator Tool
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "mcp_tool_call" }'
+        transition: Execute MCP Tool
+      - condition: '${ .choices[0].message.tool_calls[0].function.name == "a2a_delegate" }'
+        transition: Execute A2A Delegation
+    defaultCondition:
+      transition: Unsupported Tool
+
+  - name: Execute Time Tool
+    type: operation
+    actions:
+      - name: Get Current Time
+        functionRef:
+          refName: getCurrentTime
+          arguments:
+            timezone: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .timezone }'
+        actionDataFilter:
+          toResults: '.tool_result'
+    end: true
+
+  - name: Execute Calculator Tool
+    type: operation
+    actions:
+      - name: Calculate
+        functionRef:
+          refName: calculate
+          arguments:
+            expression: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .expression }'
+        actionDataFilter:
+          toResults: '.tool_result'
+    end: true
+
+  - name: Execute MCP Tool
+    type: operation
+    actions:
+      - name: Call MCP Tool
+        functionRef:
+          refName: callMcpTool
+          arguments:
+            name: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .name }'
+            arguments: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .arguments // {} }'
+        actionDataFilter:
+          toResults: '.tool_result'
+    end: true
+
+  - name: Execute A2A Delegation
+    type: operation
+    actions:
+      - name: Delegate To SubAgent
+        functionRef:
+          refName: delegateToAgent
+          arguments:
+            target_agent: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .target_agent }'
+            prompt: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .prompt }'
+        actionDataFilter:
+          toResults: '.tool_result'
+    end: true
+
+  - name: Unsupported Tool
+    type: inject
+    data:
+      tool_result:
+        error: Unsupported tool requested
+    end: true
