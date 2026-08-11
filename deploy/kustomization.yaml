@@ -10,3 +10,6 @@ configMapGenerator:
       - hitl-gate.sw.yaml=../src/main/resources/hitl-gate.sw.yaml
       - parallel-agent.sw.yaml=../src/main/resources/parallel-agent.sw.yaml
       - reflection-agent.sw.yaml=../src/main/resources/reflection-agent.sw.yaml
+      - plan-agent.sw.yaml=../src/main/resources/plan-agent.sw.yaml
+      - chain-agent.sw.yaml=../src/main/resources/chain-agent.sw.yaml
+      - supervisor-agent.sw.yaml=../src/main/resources/supervisor-agent.sw.yaml

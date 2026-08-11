@@ -1,0 +1,72 @@
+id: supervisor_agent
+version: '1.0'
+specVersion: '0.8'
+name: Supervisor Agent
+description: Reusable sub-flow for Orchestrator-Worker supervisor delegation and dynamic task routing
+start: Inspect Task Payload
+
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      a2aCatalog: classpath:/catalogs/a2a-catalog.yaml
+
+functions:
+  - name: delegateToAgent
+    operation: a2aCatalog#delegateToAgent
+
+states:
+  - name: Inspect Task Payload
+    type: switch
+    dataConditions:
+      - condition: '${ (.task_type // "research") == "code" }'
+        transition: Delegate To Coder
+      - condition: '${ (.task_type // "research") == "review" }'
+        transition: Delegate To Reviewer
+    defaultCondition:
+      transition: Delegate To Researcher
+
+  - name: Delegate To Researcher
+    type: operation
+    actions:
+      - name: Execute Researcher Worker
+        functionRef:
+          refName: delegateToAgent
+          arguments:
+            target_agent: researcher_agent
+            prompt: '${ .prompt // "Perform research analysis" }'
+        actionDataFilter:
+          toStateData: '.supervisor_output'
+    transition: Complete Supervision
+
+  - name: Delegate To Coder
+    type: operation
+    actions:
+      - name: Execute Coder Worker
+        functionRef:
+          refName: delegateToAgent
+          arguments:
+            target_agent: coder_agent
+            prompt: '${ .prompt // "Execute code implementation" }'
+        actionDataFilter:
+          toStateData: '.supervisor_output'
+    transition: Complete Supervision
+
+  - name: Delegate To Reviewer
+    type: operation
+    actions:
+      - name: Execute Reviewer Worker
+        functionRef:
+          refName: delegateToAgent
+          arguments:
+            target_agent: reviewer_agent
+            prompt: '${ .prompt // "Execute quality review" }'
+        actionDataFilter:
+          toStateData: '.supervisor_output'
+    transition: Complete Supervision
+
+  - name: Complete Supervision
+    type: inject
+    data:
+      status: completed
+      supervisor_status: Task delegated and executed by target worker agent
+    end: true

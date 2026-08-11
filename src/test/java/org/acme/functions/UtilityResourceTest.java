@@ -226,4 +226,18 @@ class UtilityResourceTest {
         assertThrows(BadRequestException.class, () -> resource.fallbackChatCompletions(null));
         assertThrows(BadRequestException.class, () -> resource.fallbackChatCompletions(Collections.emptyMap()));
     }
+
+    // Planning & Task Decomposition Tests
+    @Test
+    void decomposesGoalIntoTaskPlan() {
+        Map<String, Object> response = resource.decomposeGoal(Map.of("goal", "Build production workflow"));
+        assertEquals("Build production workflow", response.get("goal"));
+        assertNotNull(response.get("tasks"));
+    }
+
+    @Test
+    void rejectsPlanningWithoutGoal() {
+        assertThrows(BadRequestException.class, () -> resource.decomposeGoal(null));
+        assertThrows(BadRequestException.class, () -> resource.decomposeGoal(Collections.emptyMap()));
+    }
 }

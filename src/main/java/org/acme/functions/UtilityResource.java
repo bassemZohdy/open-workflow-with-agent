@@ -247,6 +247,26 @@ public class UtilityResource {
         );
     }
 
+    // Planning & Task Decomposition Endpoint
+    @POST
+    @Path("/planner/decompose")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Map<String, Object> decomposeGoal(Map<String, String> request) {
+        if (request == null || !request.containsKey("goal")) {
+            throw new BadRequestException("goal is required for task decomposition");
+        }
+        String goal = request.get("goal");
+        LOG.infof("Planner decompose executed goal=%s", goal);
+        return Map.of(
+            "goal", goal,
+            "tasks", List.of(
+                Map.of("step", 1, "task", "Analyze goal requirements: " + goal),
+                Map.of("step", 2, "task", "Execute sub-tasks"),
+                Map.of("step", 3, "task", "Validate final output")
+            )
+        );
+    }
+
     private static final class ExpressionParser {
         private final String input;
         private int position;
