@@ -18,7 +18,7 @@
     <sonataflow.version>10.1.0</sonataflow.version>
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
-    <version.surefire.plugin>3.0.0-M7</version.surefire.plugin>
+    <version.surefire.plugin>3.6.0-M1</version.surefire.plugin>
   </properties>
 
   <dependencyManagement>
