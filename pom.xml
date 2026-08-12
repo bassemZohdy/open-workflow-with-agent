@@ -15,7 +15,7 @@
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.version>3.15.1</quarkus.platform.version>
     <kogito.bom.version>10.1.0</kogito.bom.version>
-    <sonataflow.version>10.1.0</sonataflow.version>
+    <sonataflow.version>10.2.0</sonataflow.version>
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>3.0.0-M7</version.surefire.plugin>
