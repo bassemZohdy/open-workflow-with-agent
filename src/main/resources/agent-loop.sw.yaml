@@ -31,7 +31,6 @@ states:
   - name: Inject Agent Defaults
     type: inject
     data:
-      model: kimi-k2.5
       max_tool_iterations: 5
       tool_iterations: 0
       tools:
@@ -95,7 +94,11 @@ states:
         functionRef:
           refName: openaiChatCompletion
           arguments:
-            model: .model
+            # Caller-supplied "model" in the request body always wins. "default-model" is
+            # just a fallback alias - point it at any backend (Ollama, vLLM, OpenAI, etc.)
+            # via the OPENAI_BASE_URL provider (e.g. a LiteLLM model alias), so the workflow
+            # itself never hardcodes a specific vendor/model.
+            model: (.model // "default-model")
             messages: .messages
             temperature: .temperature
             max_tokens: .max_tokens

@@ -18,3 +18,5 @@ Thumbs.db
 deploy/*credentials.yaml
 !deploy/openai-credentials.example.yaml
 !deploy/litellm-credentials.example.yaml
+.env
+!.env.example

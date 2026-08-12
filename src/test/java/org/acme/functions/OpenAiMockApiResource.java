@@ -20,6 +20,9 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
     private HttpServer server;
     private final AtomicInteger llmCalls = new AtomicInteger();
 
+    /** Captures the Authorization header of the most recent request, for auth regression tests. */
+    static volatile String lastAuthorizationHeader;
+
     @Override
     public Map<String, String> start() {
         try {
@@ -45,6 +48,7 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
     private void chatCompletions(HttpExchange exchange) throws IOException {
         String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         int call = llmCalls.incrementAndGet();
+        lastAuthorizationHeader = exchange.getRequestHeaders().getFirst("Authorization");
 
         String body;
         if (requestBody.contains("time") && !requestBody.contains("role\":\"tool")) {

@@ -2,6 +2,7 @@ package org.acme.functions;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -21,5 +22,10 @@ class AgentLoopSubflowTest {
                 .then()
                 .statusCode(201)
                 .body("workflowdata.choices[0].message.content", equalTo("42"));
+
+        // Regression guard: the openaiCatalog REST client must actually send the configured
+        // OPENAI_API_KEY as a bearer token on every call - see OpenAiBearerTokenFilter for why
+        // quarkus-openapi-generator's own auth wiring can't be trusted to do this.
+        assertEquals("Bearer dummy-key", OpenAiMockApiResource.lastAuthorizationHeader);
     }
 }

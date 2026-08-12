@@ -2,10 +2,11 @@ package org.acme.functions;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
@@ -21,8 +22,11 @@ import org.jboss.logging.Logger;
 @Produces(MediaType.APPLICATION_JSON)
 public class UtilityResource {
     private static final Logger LOG = Logger.getLogger(UtilityResource.class);
-    private final Map<String, String> memoryStore = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, Object>> hitlRequests = new ConcurrentHashMap<>();
+    private static final int MAX_STORE_ENTRIES = 10_000;
+    private static final long STORE_TTL_MILLIS = TimeUnit.HOURS.toMillis(1);
+
+    private final BoundedCache<String, String> memoryStore = new BoundedCache<>(MAX_STORE_ENTRIES, STORE_TTL_MILLIS);
+    private final BoundedCache<String, Map<String, Object>> hitlRequests = new BoundedCache<>(MAX_STORE_ENTRIES, STORE_TTL_MILLIS);
 
     @GET
     @Path("/time")
@@ -47,14 +51,25 @@ public class UtilityResource {
         if (expression == null || expression.isBlank()) {
             throw new BadRequestException("expression is required");
         }
+        if (expression.length() > MAX_EXPRESSION_LENGTH) {
+            throw new BadRequestException("expression exceeds maximum length of " + MAX_EXPRESSION_LENGTH);
+        }
+        double result;
         try {
-            double result = new ExpressionParser(expression).parse();
-            LOG.infof("utility calculator executed expression=%s result=%s", expression, result);
-            return Map.of("expression", expression, "result", result);
+            result = new ExpressionParser(expression).parse();
+        } catch (StackOverflowError e) {
+            throw new BadRequestException("expression is too deeply nested");
         } catch (RuntimeException e) {
             throw new BadRequestException("invalid arithmetic expression");
         }
+        if (Double.isInfinite(result) || Double.isNaN(result)) {
+            throw new BadRequestException("expression result is not a finite number");
+        }
+        LOG.infof("utility calculator executed expression=%s result=%s", expression, result);
+        return Map.of("expression", expression, "result", result);
     }
+
+    private static final int MAX_EXPRESSION_LENGTH = 256;
 
     // Model Context Protocol (MCP) Tool Endpoints
     @GET
@@ -265,6 +280,43 @@ public class UtilityResource {
                 Map.of("step", 3, "task", "Validate final output")
             )
         );
+    }
+
+    private static final class BoundedCache<K, V> {
+        private final long ttlMillis;
+        private final Map<K, CacheEntry<V>> map;
+
+        BoundedCache(int maxSize, long ttlMillis) {
+            this.ttlMillis = ttlMillis;
+            this.map = new LinkedHashMap<K, CacheEntry<V>>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<K, CacheEntry<V>> eldest) {
+                    return size() > maxSize;
+                }
+            };
+        }
+
+        synchronized void put(K key, V value) {
+            map.put(key, new CacheEntry<>(value, System.currentTimeMillis()));
+        }
+
+        synchronized V getOrDefault(K key, V defaultValue) {
+            CacheEntry<V> entry = map.get(key);
+            if (entry == null) {
+                return defaultValue;
+            }
+            if (System.currentTimeMillis() - entry.timestamp > ttlMillis) {
+                map.remove(key);
+                return defaultValue;
+            }
+            return entry.value;
+        }
+
+        private static final class CacheEntry<V> {
+            final V value;
+            final long timestamp;
+            CacheEntry(V value, long timestamp) { this.value = value; this.timestamp = timestamp; }
+        }
     }
 
     private static final class ExpressionParser {

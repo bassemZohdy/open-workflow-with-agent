@@ -1,0 +1,15 @@
+# LiteLLM proxy config for the docker-compose local test stack.
+#
+# The application only ever talks to the OpenAI-compatible "/v1/chat/completions" endpoint
+# behind OPENAI_BASE_URL - it never hardcodes a provider or model. This file is the one place
+# that maps the workflow's "default-model" alias (see agent-loop.sw.yaml) to an actual backend.
+# Point litellm_params.model at any other LiteLLM-supported provider to swap backends without
+# touching any Java or workflow code.
+model_list:
+  - model_name: default-model
+    litellm_params:
+      model: ollama/llama3.1
+      api_base: http://ollama:11434
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

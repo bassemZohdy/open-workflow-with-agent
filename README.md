@@ -2,6 +2,11 @@
 
 This project provides the **Reference Implementation** for extending the **OpenWorkflow specification** (formerly CNCF Serverless Workflow standard) to natively support **all Canonical Agentic AI Patterns**. It leverages **SonataFlow** as the concrete production runtime engine to validate, execute, and deliver these OpenWorkflow specification extensions.
 
+> This is a reference implementation demonstrating the specification extensions - most catalog
+> endpoints (MCP, A2A, memory, HITL, guardrails) are illustrative mocks, not production
+> integrations. See "Securing the endpoints" below before exposing it beyond localhost, and
+> [`TODO.md`](TODO.md) for the tracked hardening backlog.
+
 ---
 
 ## Agentic Feature & Implementation Matrix
@@ -87,12 +92,32 @@ extensions:
 * Apache Maven 3.9+
 
 ### Environment Setup
-Configure your OpenAI-compatible endpoint (such as LiteLLM, Ollama, or vLLM) and API key:
+The application is fully provider-agnostic: it only ever calls a generic OpenAI-compatible
+`/v1/chat/completions` endpoint, configured via two environment variables. Point them at any
+OpenAI-compatible endpoint (LiteLLM, Ollama, vLLM, a hosted API, etc.):
 
 ```bash
 export OPENAI_BASE_URL=http://localhost:4000/v1
 export OPENAI_API_KEY=your-openai-key
 ```
+
+For a self-contained local stack (LiteLLM in front of Ollama, PostgreSQL, Redis) with no
+external account needed, use `docker compose` instead - see
+[`docs/13-docker-and-compose.md`](docs/13-docker-and-compose.md) and copy
+[`.env.example`](.env.example) to `.env`.
+
+#### Securing the endpoints
+By default every endpoint (`/functions/*`, the workflow entry points, the debug console) is
+open - fine for local development, not for anything reachable beyond localhost. Two optional,
+off-by-default knobs:
+
+| Variable | Effect when set |
+| :--- | :--- |
+| `UTILITY_API_KEY` | Requires `Authorization: Bearer <key>` on every request except `/q/*` management endpoints |
+| `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` | Caps total request throughput (a global, not per-client, fixed 60s window) |
+
+Both default to disabled so the curl examples, debug console, and tests below keep working
+unchanged; set them before exposing this service beyond your own machine.
 
 ### Start Quarkus Dev Mode
 
@@ -124,7 +149,8 @@ mvn clean test
 
 The test suite covers:
 * [`UtilityResourceTest`](src/test/java/org/acme/functions/UtilityResourceTest.java): Comprehensive unit tests (44 test runs) covering arithmetic operator precedence, negative/decimal numbers, whitespace handling, null/blank validation, multi-timezone resolution, MCP tool discovery/execution, A2A sub-agent delegation, Memory storage/retrieval/search, HITL approval requests/decisions, Output Guardrails JSON validation, Multi-Provider LLM Fallback chat completions, and Task Planning/Decomposition.
-* [`AgentLoopSubflowTest`](src/test/java/org/acme/functions/AgentLoopSubflowTest.java): End-to-end integration tests using [`OpenAiMockApiResource`](src/test/java/org/acme/functions/OpenAiMockApiResource.java) supporting multi-turn tool call handling (`calculate`, `get_current_time`) and direct text completions.
+* [`AgentLoopSubflowTest`](src/test/java/org/acme/functions/AgentLoopSubflowTest.java): End-to-end integration tests using [`OpenAiMockApiResource`](src/test/java/org/acme/functions/OpenAiMockApiResource.java) supporting multi-turn tool call handling (`calculate`, `get_current_time`), direct text completions, and a regression check that the bearer token is actually sent to the LLM provider.
+* [`ApiKeyAuthFilterTest`](src/test/java/org/acme/functions/ApiKeyAuthFilterTest.java) & [`RateLimitFilterTest`](src/test/java/org/acme/functions/RateLimitFilterTest.java): Verify the optional `UTILITY_API_KEY` and `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` gates behave correctly when enabled, and never block `/q/*` management endpoints.
 
 ---
 

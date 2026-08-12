@@ -63,7 +63,11 @@
       <input id="endpoint" value="llm_tool_agent" autocomplete="off">
 
       <label for="payload">Request Payload (JSON)</label>
-      <textarea id="payload">{\n  "messages": [{"role": "user", "content": "Calculate (10 + 5) * 3.5 and state current UTC time."}],\n  "temperature": 0,\n  "max_tokens": 64\n}</textarea>
+      <textarea id="payload">{
+  "messages": [{"role": "user", "content": "Calculate (10 + 5) * 3.5 and state current UTC time."}],
+  "temperature": 0,
+  "max_tokens": 64
+}</textarea>
 
       <div>
         <button id="invoke" class="primary">Execute Request</button>
@@ -117,50 +121,83 @@
   const PRESETS = {
     agent_loop: {
       endpoint: 'llm_tool_agent',
-      payload: {\n  "messages": [{"role": "user", "content": "Calculate (10 + 5) * 3.5 and state current UTC time."}],\n  "temperature": 0,\n  "max_tokens": 64\n}
+      payload: {
+        messages: [{ role: 'user', content: 'Calculate (10 + 5) * 3.5 and state current UTC time.' }],
+        temperature: 0,
+        max_tokens: 64
+      }
     },
     mcp: {
       endpoint: 'functions/mcp/call',
-      payload: {\n  "name": "web_search",\n  "arguments": { "query": "OpenWorkflow agentic extensions" }\n}
+      payload: {
+        name: 'web_search',
+        arguments: { query: 'OpenWorkflow agentic extensions' }
+      }
     },
     a2a: {
       endpoint: 'functions/a2a/delegate',
-      payload: {\n  "target_agent": "researcher_agent",\n  "prompt": "Analyze repository architecture and catalog definitions"\n}
+      payload: {
+        target_agent: 'researcher_agent',
+        prompt: 'Analyze repository architecture and catalog definitions'
+      }
     },
     memory: {
       endpoint: 'functions/memory/set',
-      payload: {\n  "key": "agent_execution_mode",\n  "value": "autonomous_production"\n}
+      payload: {
+        key: 'agent_execution_mode',
+        value: 'autonomous_production'
+      }
     },
     hitl: {
       endpoint: 'functions/hitl/request',
-      payload: {\n  "action_name": "deploy_production_workflow",\n  "description": "Approval required to deploy SonataFlow workflow to cluster"\n}
+      payload: {
+        action_name: 'deploy_production_workflow',
+        description: 'Approval required to deploy SonataFlow workflow to cluster'
+      }
     },
     guardrails: {
       endpoint: 'functions/guardrails/validate',
-      payload: {\n  "content": "{\\"status\\": \\"success\\", \\"agent_output\\": \\"Workflow completed successfully\\"}",\n  "expected_format": "json"\n}
+      payload: {
+        content: '{"status": "success", "agent_output": "Workflow completed successfully"}',
+        expected_format: 'json'
+      }
     },
     parallel: {
       endpoint: 'functions/a2a/agents',
-      payload: {}\n    },
+      payload: {}
+    },
     reflection: {
       endpoint: 'functions/guardrails/validate',
-      payload: {\n  "content": "Candidate agent answer for reflection critique"\n}
+      payload: {
+        content: 'Candidate agent answer for reflection critique'
+      }
     },
     planner: {
       endpoint: 'functions/planner/decompose',
-      payload: {\n  "goal": "Build and verify production OpenWorkflow agentic microservice"\n}
+      payload: {
+        goal: 'Build and verify production OpenWorkflow agentic microservice'
+      }
     },
     chain: {
       endpoint: 'functions/a2a/delegate',
-      payload: {\n  "target_agent": "coder_agent",\n  "prompt": "Generate workflow state definition"\n}
+      payload: {
+        target_agent: 'coder_agent',
+        prompt: 'Generate workflow state definition'
+      }
     },
     supervisor: {
       endpoint: 'functions/a2a/delegate',
-      payload: {\n  "target_agent": "reviewer_agent",\n  "prompt": "Perform code review and compliance check"\n}
+      payload: {
+        target_agent: 'reviewer_agent',
+        prompt: 'Perform code review and compliance check'
+      }
     },
     fallback: {
       endpoint: 'functions/fallback/chatCompletions',
-      payload: {\n  "primary_provider": "openai",\n  "messages": [{"role": "user", "content": "Execute failover chat completion"}]\n}
+      payload: {
+        primary_provider: 'openai',
+        messages: [{ role: 'user', content: 'Execute failover chat completion' }]
+      }
     }
   };
 
