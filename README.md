@@ -128,6 +128,16 @@ The test suite covers:
 
 ---
 
+## Feature Documentation & Infrastructure
+
+Detailed standalone technical guides for each Agentic pattern and container infrastructure are available under [`docs/`](docs/README.md):
+
+* [**Standalone Pattern Documentation Index**](docs/README.md)
+* [**Docker Container Build & PostgreSQL / Redis Stack Guide**](docs/13-docker-and-compose.md)
+* [**Docker Compose Manifest**](docker-compose.yml)
+
+---
+
 ## Kubernetes & OpenShift Deployment
 
 Deployments target OpenShift Serverless Logic / Kubernetes using the SonataFlow GitOps profile. See [`deploy/README.md`](deploy/README.md) for manifest packaging, secrets, and deployment commands.

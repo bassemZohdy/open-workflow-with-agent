@@ -3,91 +3,199 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SonataFlow Debug Console</title>
+  <title>Agentic OpenWorkflow Reference Console</title>
   <style>
     :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; background: #10151d; color: #e8edf5; }
-    main { max-width: 1080px; margin: auto; padding: 32px 20px 56px; }
-    header { display: flex; justify-content: space-between; gap: 20px; align-items: baseline; margin-bottom: 24px; }
-    h1 { margin: 0; font-size: 1.8rem; } h2 { font-size: 1.05rem; margin-top: 0; }
-    .muted { color: #9ca9bb; } .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .card { background: #18212d; border: 1px solid #2b394b; border-radius: 10px; padding: 18px; }
-    label { display: block; color: #b8c4d4; font-size: .85rem; margin: 12px 0 6px; }
-    input, textarea { box-sizing: border-box; width: 100%; border: 1px solid #3a4b61; border-radius: 6px; padding: 9px; background: #0f151d; color: #f5f7fa; font: inherit; }
-    textarea { min-height: 150px; resize: vertical; }
-    button, a { display: inline-block; border: 0; border-radius: 6px; padding: 9px 13px; margin: 14px 8px 0 0; background: #3b82f6; color: white; text-decoration: none; cursor: pointer; font: inherit; }
-    button.secondary, a.secondary { background: #334155; } button:disabled { opacity: .6; cursor: wait; }
-    pre { min-height: 240px; max-height: 520px; overflow: auto; white-space: pre-wrap; background: #0b1017; border-radius: 6px; padding: 12px; color: #c7f9cc; }
-    .status { padding: 8px 10px; border-radius: 6px; background: #263449; } .ok { color: #86efac; } .bad { color: #fca5a5; }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } header { display: block; } }
+    body { margin: 0; background: #0f172a; color: #f8fafc; }
+    main { max-width: 1200px; margin: auto; padding: 24px 20px 48px; }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #1e293b; padding-bottom: 16px; }
+    h1 { margin: 0; font-size: 1.75rem; color: #38bdf8; } h2 { font-size: 1.1rem; margin-top: 0; color: #cbd5e1; }
+    .subtitle { color: #94a3b8; font-size: 0.9rem; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+    label { display: block; color: #94a3b8; font-size: .85rem; margin: 12px 0 6px; font-weight: 500; }
+    input, select, textarea { box-sizing: border-box; width: 100%; border: 1px solid #475569; border-radius: 6px; padding: 10px; background: #0f172a; color: #f8fafc; font: inherit; }
+    textarea { min-height: 140px; resize: vertical; font-family: ui-monospace, monospace; font-size: .9rem; }
+    .preset-container { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .preset-btn { background: #334155; color: #e2e8f0; border: 1px solid #475569; font-size: .8rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: background .15s; }
+    .preset-btn:hover { background: #0284c7; color: white; border-color: #0284c7; }
+    button.primary { background: #0284c7; color: white; border: 0; border-radius: 6px; padding: 10px 18px; cursor: pointer; font: inherit; font-weight: 600; margin-top: 14px; }
+    button.primary:hover { background: #0369a1; } button.secondary { background: #334155; color: #e2e8f0; border: 0; border-radius: 6px; padding: 10px 14px; margin-left: 8px; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    pre { min-height: 280px; max-height: 550px; overflow: auto; white-space: pre-wrap; background: #020617; border-radius: 8px; padding: 16px; color: #38bdf8; border: 1px solid #1e293b; font-family: ui-monospace, monospace; font-size: .88rem; }
+    .status { padding: 8px 12px; border-radius: 6px; background: #334155; font-size: .85rem; font-weight: 500; }
+    .ok { color: #4ade80; border-left: 4px solid #22c55e; } .bad { color: #f87171; border-left: 4px solid #ef4444; }
+    .feature-tag { display: inline-block; background: #0369a1; color: #e0f2fe; padding: 3px 8px; border-radius: 4px; font-size: .75rem; margin-right: 6px; margin-bottom: 6px; }
+    @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } header { flex-direction: column; align-items: flex-start; } }
   </style>
 </head>
 <body>
 <main>
   <header>
-    <div><h1>SonataFlow Debug Console</h1><div class="muted">Lightweight local workflow administration</div></div>
-    <div id="health" class="status">Checking runtime…</div>
+    <div>
+      <h1>Agentic OpenWorkflow Console</h1>
+      <div class="subtitle">Reference Implementation Debug Console for All 14 Canonical Agentic Patterns & Catalogs</div>
+    </div>
+    <div id="health" class="status">Checking runtime health…</div>
   </header>
 
   <section class="grid">
     <div class="card">
-      <h2>Invoke workflow</h2>
-      <label for="workflow">Workflow endpoint</label>
-      <input id="workflow" value="llm_tool_agent" autocomplete="off">
-      <label for="message">User message</label>
-      <textarea id="message">Reply with exactly: hello from the debug console</textarea>
-      <div class="grid">
-        <div><label for="temperature">Temperature</label><input id="temperature" type="number" step="0.1" value="0"></div>
-        <div><label for="tokens">Max tokens</label><input id="tokens" type="number" value="64"></div>
+      <h2>Execute Pattern / Catalog Endpoint</h2>
+
+      <label for="featurePreset">Select Canonical Agentic Pattern Preset</label>
+      <select id="featurePreset" onchange="applyPreset()">
+        <option value="agent_loop">1. Agent Loop (Autonomous Reasoning & Tool Execution)</option>
+        <option value="mcp">2. Model Context Protocol (MCP Tool Discovery & Execution)</option>
+        <option value="a2a">3. Agent-to-Agent (A2A Sub-Agent Delegation)</option>
+        <option value="memory">4. Short & Long-Term Memory (KV & Vector Search)</option>
+        <option value="hitl">5. Human-in-the-Loop (HITL Approval Gate)</option>
+        <option value="guardrails">6. Output Guardrails (JSON Schema & Content Moderation)</option>
+        <option value="parallel">7. Parallel Multi-Agent Fan-Out (Concurrent Execution)</option>
+        <option value="reflection">8. Self-Reflection & Critique Loop (Generation -> Critique)</option>
+        <option value="planner">9. Planning & Task Decomposition (Goal -> Sub-tasks)</option>
+        <option value="chain">10. Sequential Pipeline Chaining (Research -> Code -> Review)</option>
+        <option value="supervisor">11. Supervisor Router (Dynamic Worker Delegation)</option>
+        <option value="fallback">12. Multi-Provider Fallback (Failover Routing)</option>
+      </select>
+
+      <label for="endpoint">Endpoint Path</label>
+      <input id="endpoint" value="llm_tool_agent" autocomplete="off">
+
+      <label for="payload">Request Payload (JSON)</label>
+      <textarea id="payload">{\n  "messages": [{"role": "user", "content": "Calculate (10 + 5) * 3.5 and state current UTC time."}],\n  "temperature": 0,\n  "max_tokens": 64\n}</textarea>
+
+      <div>
+        <button id="invoke" class="primary">Execute Request</button>
+        <button id="clear" class="secondary">Clear Output</button>
       </div>
-      <button id="invoke">Run workflow</button><button id="clear" class="secondary">Clear output</button>
     </div>
 
     <div class="card">
-      <h2>Runtime links</h2>
-      <p class="muted">Use these endpoints for diagnosis and API exploration.</p>
-      <a class="secondary" href="/q/health" target="_blank" rel="noreferrer">Health</a>
-      <a class="secondary" href="/q/openapi" target="_blank" rel="noreferrer">OpenAPI</a>
-      <a class="secondary" href="/q/swagger-ui/" target="_blank" rel="noreferrer">Swagger UI</a>
-      <label>Configured model</label><div class="status">kimi-k2.5</div>
-      <label>Provider endpoint</label><div id="provider" class="status">Configured by OPENAI_BASE_URL</div>
-      <p class="muted">API keys are never displayed by this console.</p>
+      <h2>Supported Agentic Capabilities</h2>
+      <div style="margin-bottom:14px;">
+        <span class="feature-tag">Autonomous Loop</span>
+        <span class="feature-tag">Dynamic Tool Router</span>
+        <span class="feature-tag">MCP Protocol</span>
+        <span class="feature-tag">A2A Delegation</span>
+        <span class="feature-tag">KV & Vector Memory</span>
+        <span class="feature-tag">HITL Gating</span>
+        <span class="feature-tag">Output Guardrails</span>
+        <span class="feature-tag">Parallel Fan-Out</span>
+        <span class="feature-tag">Self-Reflection</span>
+        <span class="feature-tag">Task Planner</span>
+        <span class="feature-tag">Sequential Pipeline</span>
+        <span class="feature-tag">Supervisor Router</span>
+        <span class="feature-tag">Provider Fallback</span>
+      </div>
+
+      <label>OpenAPI Catalog Endpoints</label>
+      <div style="margin-top:8px;">
+        <a class="secondary" href="/q/swagger-ui/" target="_blank" rel="noreferrer">Swagger UI</a>
+        <a class="secondary" href="/q/openapi" target="_blank" rel="noreferrer">OpenAPI Spec</a>
+        <a class="secondary" href="/q/health" target="_blank" rel="noreferrer">Health Check</a>
+      </div>
+
+      <label style="margin-top:16px;">Runtime Provider Configuration</label>
+      <div id="provider" class="status">Configured via OPENAI_BASE_URL & OPENAI_API_KEY</div>
     </div>
   </section>
 
-  <section class="card" style="margin-top:16px">
-    <h2>Execution result</h2>
-    <pre id="output">No workflow execution yet.</pre>
+  <section class="card" style="margin-top:20px">
+    <h2>Execution Response Output</h2>
+    <pre id="output">Select a preset above and click "Execute Request" to test OpenWorkflow features.</pre>
   </section>
 </main>
+
 <script>
   const output = document.getElementById('output');
   const health = document.getElementById('health');
   const invoke = document.getElementById('invoke');
-  const pretty = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  const endpointEl = document.getElementById('endpoint');
+  const payloadEl = document.getElementById('payload');
+
+  const PRESETS = {
+    agent_loop: {
+      endpoint: 'llm_tool_agent',
+      payload: {\n  "messages": [{"role": "user", "content": "Calculate (10 + 5) * 3.5 and state current UTC time."}],\n  "temperature": 0,\n  "max_tokens": 64\n}
+    },
+    mcp: {
+      endpoint: 'functions/mcp/call',
+      payload: {\n  "name": "web_search",\n  "arguments": { "query": "OpenWorkflow agentic extensions" }\n}
+    },
+    a2a: {
+      endpoint: 'functions/a2a/delegate',
+      payload: {\n  "target_agent": "researcher_agent",\n  "prompt": "Analyze repository architecture and catalog definitions"\n}
+    },
+    memory: {
+      endpoint: 'functions/memory/set',
+      payload: {\n  "key": "agent_execution_mode",\n  "value": "autonomous_production"\n}
+    },
+    hitl: {
+      endpoint: 'functions/hitl/request',
+      payload: {\n  "action_name": "deploy_production_workflow",\n  "description": "Approval required to deploy SonataFlow workflow to cluster"\n}
+    },
+    guardrails: {
+      endpoint: 'functions/guardrails/validate',
+      payload: {\n  "content": "{\\"status\\": \\"success\\", \\"agent_output\\": \\"Workflow completed successfully\\"}",\n  "expected_format": "json"\n}
+    },
+    parallel: {
+      endpoint: 'functions/a2a/agents',
+      payload: {}\n    },
+    reflection: {
+      endpoint: 'functions/guardrails/validate',
+      payload: {\n  "content": "Candidate agent answer for reflection critique"\n}
+    },
+    planner: {
+      endpoint: 'functions/planner/decompose',
+      payload: {\n  "goal": "Build and verify production OpenWorkflow agentic microservice"\n}
+    },
+    chain: {
+      endpoint: 'functions/a2a/delegate',
+      payload: {\n  "target_agent": "coder_agent",\n  "prompt": "Generate workflow state definition"\n}
+    },
+    supervisor: {
+      endpoint: 'functions/a2a/delegate',
+      payload: {\n  "target_agent": "reviewer_agent",\n  "prompt": "Perform code review and compliance check"\n}
+    },
+    fallback: {
+      endpoint: 'functions/fallback/chatCompletions',
+      payload: {\n  "primary_provider": "openai",\n  "messages": [{"role": "user", "content": "Execute failover chat completion"}]\n}
+    }
+  };
+
+  function applyPreset() {
+    const key = document.getElementById('featurePreset').value;
+    const preset = PRESETS[key];
+    if (preset) {
+      endpointEl.value = preset.endpoint;
+      payloadEl.value = JSON.stringify(preset.payload, null, 2);
+    }
+  }
 
   async function checkHealth() {
     try {
       const response = await fetch('/q/health');
       health.textContent = response.ok ? 'Runtime healthy' : `Health HTTP ${response.status}`;
       health.className = `status ${response.ok ? 'ok' : 'bad'}`;
-    } catch (error) { health.textContent = 'Runtime unavailable'; health.className = 'status bad'; }
+    } catch (_) { health.textContent = 'Runtime unavailable'; health.className = 'status bad'; }
   }
 
+  const pretty = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+
   invoke.onclick = async () => {
-    invoke.disabled = true; output.textContent = 'Executing…';
-    const endpoint = document.getElementById('workflow').value.trim();
-    const body = { messages: [{ role: 'user', content: document.getElementById('message').value }],
-      temperature: Number(document.getElementById('temperature').value), max_tokens: Number(document.getElementById('tokens').value) };
+    invoke.disabled = true; output.textContent = 'Executing OpenWorkflow request…';
+    const ep = endpointEl.value.trim().replace(/^\//, '');
+    let body; try { body = JSON.parse(payloadEl.value); } catch (e) { output.textContent = `Invalid JSON payload\n\n${e}`; invoke.disabled = false; return; }
     try {
-      const response = await fetch(`/${encodeURIComponent(endpoint)}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+      const response = await fetch(`/${ep}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
       const content = await response.text();
       let parsed; try { parsed = JSON.parse(content); } catch (_) { parsed = content; }
       output.textContent = `HTTP ${response.status}\n\n${pretty(parsed)}`;
     } catch (error) { output.textContent = `Request failed\n\n${error}`; }
     finally { invoke.disabled = false; checkHealth(); }
   };
-  document.getElementById('clear').onclick = () => output.textContent = 'No workflow execution yet.';
+  document.getElementById('clear').onclick = () => output.textContent = 'Select a preset above and click "Execute Request" to test OpenWorkflow features.';
   checkHealth();
 </script>
 </body>
