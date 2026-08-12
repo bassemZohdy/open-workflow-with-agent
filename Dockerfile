@@ -6,7 +6,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime image using Temurin JRE 17
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /deployments
 
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
