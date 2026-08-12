@@ -1,8 +1,8 @@
 # Agentic OpenWorkflow Specification Reference Implementation
 
-This project provides the **Reference Implementation** for extending the **OpenWorkflow specification** (CNCF Serverless Workflow standard) to natively support **all Canonical Agentic AI Patterns**. It leverages **SonataFlow** as the concrete production runtime engine to validate, execute, and deliver these OpenWorkflow specification extensions.
+This project provides the **Reference Implementation** for extending the **OpenWorkflow specification** (formerly CNCF Serverless Workflow standard) to natively support **all Canonical Agentic AI Patterns**. It leverages **SonataFlow** as the concrete production runtime engine to validate, execute, and deliver these OpenWorkflow specification extensions.
 
-The architecture introduces two core extensions to standard serverless workflow engines:
+The architecture introduces two core extensions to standard OpenWorkflow engines:
 1. **Catalog Functions**: Modular, externalized OpenAPI specification registries (`catalogs`) for LLM providers, domain tools, Model Context Protocol (MCP), Agent-to-Agent (A2A) delegation, Short/Long-Term Memory, Human-in-the-Loop (HITL), Output Guardrails, Multi-Provider Fallback, and Task Planning.
 2. **Agentic Sub-Flows**: Modular workflow subflows (`subFlowRef`) encapsulating canonical agent patterns (Autonomous Reasoning, Tool Dispatching, HITL Gating, Parallel Fan-Out, Self-Reflection Critique, Task Decomposition, Sequential Chaining, and Supervisor Delegation).
 

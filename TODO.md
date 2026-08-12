@@ -1,6 +1,6 @@
 # OpenWorkflow Specification & Agentic Capabilities Roadmap
 
-This document outlines the full feature matrix for extending the **OpenWorkflow specification** (CNCF Serverless Workflow standard) to natively support all **Canonical Agentic Design Patterns**.
+This document outlines the full feature matrix for extending the **OpenWorkflow specification** (formerly CNCF Serverless Workflow standard) to natively support all **Canonical Agentic Design Patterns**.
 
 ---
 
