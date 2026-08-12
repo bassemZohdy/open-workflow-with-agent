@@ -1,7 +1,6 @@
 package org.acme.functions;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +29,14 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
             String base = "http://localhost:" + server.getAddress().getPort();
             return Map.of(
                     "quarkus.rest-client.openaiCatalog.url", base + "/v1",
-                    "quarkus.rest-client.utilityCatalog.url", "http://localhost:8081");
+                    "quarkus.openapi-generator.openaiCatalog.url", base + "/v1",
+                    "org.kie.kogito.openapi.client.openaiCatalog.url", base + "/v1",
+                    "quarkus.rest-client.openaiCatalog_json.url", base + "/v1",
+                    "quarkus.rest-client.utilityCatalog.url", "http://localhost:8081",
+                    "quarkus.openapi-generator.utilityCatalog.url", "http://localhost:8081",
+                    "org.kie.kogito.openapi.client.utilityCatalog.url", "http://localhost:8081",
+                    "quarkus.rest-client.utilityCatalog_json.url", "http://localhost:8081"
+            );
         } catch (IOException e) {
             throw new IllegalStateException("Cannot start OpenAI mock API server", e);
         }
