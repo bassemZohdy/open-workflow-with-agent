@@ -2,9 +2,25 @@
 
 This project provides the **Reference Implementation** for extending the **OpenWorkflow specification** (formerly CNCF Serverless Workflow standard) to natively support **all Canonical Agentic AI Patterns**. It leverages **SonataFlow** as the concrete production runtime engine to validate, execute, and deliver these OpenWorkflow specification extensions.
 
-The architecture introduces two core extensions to standard OpenWorkflow engines:
-1. **Catalog Functions**: Modular, externalized OpenAPI specification registries (`catalogs`) for LLM providers, domain tools, Model Context Protocol (MCP), Agent-to-Agent (A2A) delegation, Short/Long-Term Memory, Human-in-the-Loop (HITL), Output Guardrails, Multi-Provider Fallback, and Task Planning.
-2. **Agentic Sub-Flows**: Modular workflow subflows (`subFlowRef`) encapsulating canonical agent patterns (Autonomous Reasoning, Tool Dispatching, HITL Gating, Parallel Fan-Out, Self-Reflection Critique, Task Decomposition, Sequential Chaining, and Supervisor Delegation).
+## OpenWorkflow Specification Extensions & Implementation Architecture
+
+| Feature Category | Description | Implementation Mechanism |
+| :--- | :--- | :--- |
+| **Catalog Functions** | Modular, externalized OpenAPI registries for LLM providers, domain tools, MCP, A2A, Memory, HITL, Guardrails, Fallback, and Planning | `workflow-uri-definitions` extension referencing OpenAPI specs (`classpath:/catalogs/*.yaml`) |
+| **Agentic Reasoning Sub-Flows** | Autonomous multi-turn reasoning loop with safety guardrails and tool iteration limits | Modular `subFlowRef` delegation ([`agent-loop.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/agent-loop.sw.yaml)) |
+| **Dynamic Tool Router Sub-Flow** | Generic dispatching of function calls to OpenAPI catalog operations | Modular `subFlowRef` routing state ([`tool-executor.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/tool-executor.sw.yaml)) |
+| **Model Context Protocol (MCP)** | Open protocol for JSON-RPC / OpenAPI tool discovery and execution | MCP Catalog (`mcpCatalog#listMcpTools`, `mcpCatalog#callMcpTool`) + REST service endpoints |
+| **Agent-to-Agent (A2A) Communication** | Peer and sub-agent directory lookup and task delegation | A2A Catalog (`a2aCatalog#listAgents`, `a2aCatalog#delegateToAgent`) + sub-agent routing |
+| **Short & Long-Term Memory** | Context buffer storage, key-value retrieval, and vector memory search | Memory Catalog (`memoryCatalog#getMemory`, `memoryCatalog#setMemory`, `memoryCatalog#searchMemory`) |
+| **Human-in-the-Loop (HITL) Gating** | Pausing workflow execution pending human review and approval | HITL Gate Sub-Flow ([`hitl-gate.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/hitl-gate.sw.yaml)) + HITL Catalog |
+| **Output Guardrails & Validation** | Structured JSON schema validation and response safety checks | Guardrails Catalog (`guardrailsCatalog#validateOutput`) |
+| **Parallel Multi-Agent Fan-Out** | Concurrent multi-agent task execution across sub-agents | Parallel Sub-Flow ([`parallel-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/parallel-agent.sw.yaml)) using `parallel` states |
+| **Self-Reflection & Critique Loop** | Recursive generation, guardrail evaluation, and self-refinement | Reflection Sub-Flow ([`reflection-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/reflection-agent.sw.yaml)) with critique switch states |
+| **Planning & Task Decomposition** | Goal decomposition into ordered sub-task plans | Planning Sub-Flow ([`plan-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/plan-agent.sw.yaml)) + Planner Catalog |
+| **Sequential Chaining Pipeline** | Step-by-step multi-agent pipeline (Research -> Code -> Review) | Chaining Sub-Flow ([`chain-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/chain-agent.sw.yaml)) |
+| **Supervisor / Worker Router** | Dynamic supervisor routing tasks to specialized worker sub-agents | Supervisor Sub-Flow ([`supervisor-agent.sw.yaml`](file:///C:/Users/Bassem/Code/open-workflow-with-agent/src/main/resources/supervisor-agent.sw.yaml)) |
+| **Multi-Provider Fallback** | Provider failover routing across primary and backup LLM providers | Fallback Catalog (`fallbackCatalog#fallbackChatCompletions`) |
+| **Generic Message Appender** | Universal formatting of tool outputs into LLM prompt state history | Reusable expression function (`appendToolResult`) |
 
 ---
 
