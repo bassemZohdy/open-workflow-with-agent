@@ -11,40 +11,38 @@ test.describe('Agentic OpenWorkflow Console E2E Recording & Verification', () =>
   });
 
   const patterns = [
-    { name: '1. Autonomous Agent Loop', value: 'agent_loop', expectedEndpoint: 'llm_tool_agent' },
-    { name: '2. Model Context Protocol (MCP)', value: 'mcp', expectedEndpoint: 'functions/mcp/call' },
-    { name: '3. Agent-to-Agent (A2A)', value: 'a2a', expectedEndpoint: 'functions/a2a/delegate' },
-    { name: '4. Short & Long-Term Memory', value: 'memory', expectedEndpoint: 'functions/memory/set' },
-    { name: '5. Human-in-the-Loop (HITL)', value: 'hitl', expectedEndpoint: 'functions/hitl/request' },
-    { name: '6. Output Guardrails', value: 'guardrails', expectedEndpoint: 'functions/guardrails/validate' },
-    { name: '7. Parallel Multi-Agent Fan-Out', value: 'parallel', expectedEndpoint: 'functions/a2a/agents' },
-    { name: '8. Self-Reflection Critique', value: 'reflection', expectedEndpoint: 'functions/guardrails/validate' },
-    { name: '9. Task Planning Decomposition', value: 'planner', expectedEndpoint: 'functions/planner/decompose' },
-    { name: '10. Sequential Chaining', value: 'chain', expectedEndpoint: 'functions/a2a/delegate' },
-    { name: '11. Supervisor Router', value: 'supervisor', expectedEndpoint: 'functions/a2a/delegate' },
-    { name: '12. Multi-Provider Fallback', value: 'fallback', expectedEndpoint: 'functions/fallback/chatCompletions' },
+    { name: '1. Model Context Protocol (MCP)', endpoint: 'functions/mcp/call', payload: { name: 'web_search', arguments: { query: 'OpenWorkflow' } } },
+    { name: '2. Agent-to-Agent (A2A)', endpoint: 'functions/a2a/delegate', payload: { target_agent: 'researcher_agent', prompt: 'Analyze repo' } },
+    { name: '3. Short & Long-Term Memory', endpoint: 'functions/memory/set', payload: { key: 'test_key', value: 'test_val' } },
+    { name: '4. Human-in-the-Loop (HITL)', endpoint: 'functions/hitl/request', payload: { action_name: 'deploy', description: 'Approval test' } },
+    { name: '5. Output Guardrails', endpoint: 'functions/guardrails/validate', payload: { content: '{"status":"ok"}' } },
+    { name: '6. Parallel Multi-Agent Fan-Out', endpoint: 'functions/a2a/agents', payload: {} },
+    { name: '7. Self-Reflection Critique', endpoint: 'functions/guardrails/validate', payload: { content: 'Critique content' } },
+    { name: '8. Task Planning Decomposition', endpoint: 'functions/planner/decompose', payload: { goal: 'Build microservice' } },
+    { name: '9. Sequential Chaining', endpoint: 'functions/a2a/delegate', payload: { target_agent: 'coder_agent', prompt: 'Write code' } },
+    { name: '10. Supervisor Router', endpoint: 'functions/a2a/delegate', payload: { target_agent: 'reviewer_agent', prompt: 'Review code' } },
+    { name: '11. Multi-Provider Fallback', endpoint: 'functions/fallback/chatCompletions', payload: { primary_provider: 'openai' } },
+    { name: '12. Utility Calculator', endpoint: 'functions/calculator', payload: { expression: '25 * 4' } },
   ];
 
   for (const pattern of patterns) {
     test(`records and verifies pattern: ${pattern.name}`, async ({ page }) => {
-      await page.selectOption('#featurePreset', pattern.value);
-      await page.dispatchEvent('#featurePreset', 'change');
-      await expect(page.locator('#endpoint')).toHaveValue(pattern.expectedEndpoint);
+      await page.fill('#endpoint', pattern.endpoint);
+      await page.fill('#payload', JSON.stringify(pattern.payload, null, 2));
 
       await page.click('#invoke');
 
-      // Wait until HTTP response content is displayed in pre element
       await page.waitForFunction(
         () => {
           const text = document.getElementById('output')?.textContent || '';
-          return text.includes('HTTP ') || text.includes('Executed') || text.includes('agents');
+          return text.includes('HTTP 200');
         },
-        { timeout: 15000 }
+        { timeout: 5000 }
       );
 
       const outputText = await page.locator('#output').innerText();
+      expect(outputText).toContain('HTTP 200');
       expect(outputText).not.toContain('Invalid JSON payload');
-      expect(outputText).toMatch(/HTTP \d{3}/);
     });
   }
 });
