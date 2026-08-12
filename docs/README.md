@@ -44,3 +44,6 @@ This directory contains standalone, dedicated documentation for each **Canonical
 
 13. [**Infrastructure Integration: Docker, PostgreSQL & Redis**](13-docker-and-compose.md)
     * Container image build (`Dockerfile`) and Docker Compose orchestration (`docker-compose.yml`) with PostgreSQL state persistence and Redis agent memory cache.
+
+14. [**Playwright E2E Testing & Feature Recording**](14-playwright-e2e.md)
+    * Automated Playwright E2E test runner, video recording (`video: 'on'`), trace zip artifacts, and UI preset assertions.

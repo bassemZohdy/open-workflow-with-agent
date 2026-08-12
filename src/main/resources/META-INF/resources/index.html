@@ -195,6 +195,7 @@
     } catch (error) { output.textContent = `Request failed\n\n${error}`; }
     finally { invoke.disabled = false; checkHealth(); }
   };
+  document.getElementById('featurePreset').addEventListener('change', applyPreset);
   document.getElementById('clear').onclick = () => output.textContent = 'Select a preset above and click "Execute Request" to test OpenWorkflow features.';
   checkHealth();
 </script>
