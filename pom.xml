@@ -6,8 +6,8 @@
   <groupId>org.acme</groupId>
   <artifactId>llm-tool-agent</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <name>SonataFlow LLM Tool Agent</name>
-  <description>SonataFlow YAML LLM tool-agent workflow</description>
+  <name>Agentic OpenWorkflow Reference Implementation</name>
+  <description>Production-ready reference implementation for extending the OpenWorkflow specification with native Agentic AI capabilities</description>
 
   <properties>
     <quarkus-plugin.version>3.8.4</quarkus-plugin.version>

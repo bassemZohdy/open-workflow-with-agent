@@ -1,6 +1,6 @@
 # OpenShift Serverless Logic & Kubernetes Deployment
 
-This deployment demonstrates running the **Agentic OpenWorkflow Specification Proof-of-Concept** on OpenShift Serverless Logic (SonataFlow engine version 1.38.0 GitOps profile).
+This deployment runs the **Agentic OpenWorkflow Specification Reference Implementation** on OpenShift Serverless Logic (SonataFlow engine version 10.0.0 GitOps profile).
 
 ---
 
