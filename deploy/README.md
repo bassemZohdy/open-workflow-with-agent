@@ -1,6 +1,6 @@
 # OpenShift Serverless Logic & Kubernetes Deployment
 
-This deployment runs the **Agentic OpenWorkflow Specification Reference Implementation** on OpenShift Serverless Logic (SonataFlow engine version 10.1.0 GitOps profile).
+This deployment runs the **Agentic OpenWorkflow Specification Reference Implementation** on OpenShift Serverless Logic (SonataFlow engine version 10.2.0 GitOps profile).
 
 ---
 
@@ -9,7 +9,7 @@ This deployment runs the **Agentic OpenWorkflow Specification Reference Implemen
 The OpenWorkflow spec components are mapped to Kubernetes resources as follows:
 
 * **Parent Workflow Entry Point** ([`llm-tool-agent.sw.yaml`](../src/main/resources/llm-tool-agent.sw.yaml)): Defined in [`sonataflow.yaml`](sonataflow.yaml) as the primary SonataFlow Custom Resource (CR).
-* **Agentic Sub-Flows** ([`agent-loop.sw.yaml`](../src/main/resources/agent-loop.sw.yaml) & [`tool-executor.sw.yaml`](../src/main/resources/tool-executor.sw.yaml)): Packaged dynamically into the `llm-tool-agent-resources` ConfigMap using [`kustomization.yaml`](kustomization.yaml).
+* **Agentic Sub-Flows** ([`agent-loop.sw.yaml`](../src/main/resources/sub_flows/agent-loop.sw.yaml) & [`tool-executor.sw.yaml`](../src/main/resources/sub_flows/tool-executor.sw.yaml)): Packaged dynamically into the `llm-tool-agent-resources` ConfigMap using [`kustomization.yaml`](kustomization.yaml).
 * **Catalog Functions**: OpenAPI catalogs ([`openai-compatible.yaml`](../src/main/resources/catalogs/openai-compatible.yaml) and [`utility-functions.yaml`](../src/main/resources/catalogs/utility-functions.yaml)) are bundled inside the runtime image under `src/main/resources/catalogs` so the workflow engine resolves catalog definitions natively.
 
 ---
@@ -46,7 +46,7 @@ oc apply -f deploy/openai-credentials.yaml -n "$NAMESPACE"
 Apply the Kustomize package to deploy the workflow CR and subflow resources:
 
 ```bash
-oc apply -k deploy -n "$NAMESPACE"
+oc kustomize deploy --load-restrictor LoadRestrictionsNone | oc apply -f - -n "$NAMESPACE"
 ```
 
 Monitor deployment status:

@@ -5,7 +5,7 @@ The Agent-to-Agent (A2A) protocol enables a primary workflow coordinator to disc
 
 ## Architecture
 - **OpenAPI Catalog**: `src/main/resources/catalogs/a2a-catalog.yaml`
-- **Tool Executor State**: `Execute A2A Delegation` in `src/main/resources/tool-executor.sw.yaml`
+- **Tool Executor State**: `Execute A2A Delegation` in `src/main/resources/sub_flows/tool-executor.sw.yaml`
 - **REST Endpoints**: `@GET /functions/a2a/agents` and `@POST /functions/a2a/delegate` in `UtilityResource.java`
 
 ## Registered Sub-Agents

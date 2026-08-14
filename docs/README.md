@@ -2,6 +2,10 @@
 
 This directory contains standalone, dedicated documentation for each **Canonical Agentic AI Pattern** and **Infrastructure Integration** supported by the OpenWorkflow Specification Reference Implementation.
 
+Reusable workflow definitions are organized under `src/main/resources/sub_flows/`; the public `llm-tool-agent.sw.yaml` entry point remains at the resources root.
+
+The reusable decision subflows [boolean-decision.sw.yaml](../src/main/resources/sub_flows/boolean-decision.sw.yaml) and [choice-decision.sw.yaml](../src/main/resources/sub_flows/choice-decision.sw.yaml) provide strict typed decisions for workflows that need a yes/no answer or one value from an allowed list.
+
 ---
 
 ## Technical Documentation Modules
@@ -47,3 +51,6 @@ This directory contains standalone, dedicated documentation for each **Canonical
 
 14. [**Playwright E2E Testing & Feature Recording**](14-playwright-e2e.md)
     * Automated Playwright E2E test runner, video recording (`video: 'on'`), trace zip artifacts, and UI preset assertions.
+
+15. [**Reusable Decision Subflows**](15-decision-subflows.md)
+    * Strict yes/no and constrained option-selection decisions with typed validation.

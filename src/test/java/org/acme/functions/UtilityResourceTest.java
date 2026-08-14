@@ -65,6 +65,17 @@ class UtilityResourceTest {
     }
 
     @Test
+    void rejectsExpressionsThatExceedTheSafetyLimit() {
+        assertThrows(BadRequestException.class, () -> resource.calculate(Map.of("expression", "1".repeat(257))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1 / 0", "1e309"})
+    void rejectsNonFiniteResults(String expr) {
+        assertThrows(BadRequestException.class, () -> resource.calculate(Map.of("expression", expr)));
+    }
+
+    @Test
     void returnsTimeForValidTimezone() {
         Map<String, String> result = resource.time("UTC");
         assertEquals("UTC", result.get("timezone"));
@@ -120,6 +131,12 @@ class UtilityResourceTest {
     void rejectsMcpToolCallWithoutName() {
         assertThrows(BadRequestException.class, () -> resource.callMcpTool(null));
         assertThrows(BadRequestException.class, () -> resource.callMcpTool(Collections.emptyMap()));
+    }
+
+    @Test
+    void reportsPendingStatusForUnknownHitlRequest() {
+        Map<String, Object> response = resource.getApprovalStatus("unknown-request");
+        assertEquals("pending", response.get("status"));
     }
 
     // A2A Tests
@@ -225,6 +242,14 @@ class UtilityResourceTest {
     void rejectsFallbackWithoutMessages() {
         assertThrows(BadRequestException.class, () -> resource.fallbackChatCompletions(null));
         assertThrows(BadRequestException.class, () -> resource.fallbackChatCompletions(Collections.emptyMap()));
+    }
+
+    @Test
+    void usesCallerSelectedFallbackProvider() {
+        Map<String, Object> response = resource.fallbackChatCompletions(Map.of(
+                "primary_provider", "ollama",
+                "messages", List.of(Map.of("role", "user", "content", "hi"))));
+        assertEquals("ollama", response.get("provider"));
     }
 
     // Planning & Task Decomposition Tests

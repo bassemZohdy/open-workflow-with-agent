@@ -4,6 +4,6 @@
 Pauses workflow execution to request human review and approval for sensitive tool actions (such as production deployments or external database mutations).
 
 ## Architecture
-- **Sub-Flow**: `src/main/resources/hitl-gate.sw.yaml` (id: `hitl_gate`)
+- **Sub-Flow**: `src/main/resources/sub_flows/hitl-gate.sw.yaml` (id: `hitl_gate`)
 - **OpenAPI Catalog**: `src/main/resources/catalogs/hitl-catalog.yaml`
 - **REST Endpoints**: `@POST /functions/hitl/request`, `@POST /functions/hitl/approve`, `@GET /functions/hitl/status` in `UtilityResource.java`
