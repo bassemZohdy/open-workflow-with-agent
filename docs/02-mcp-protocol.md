@@ -5,7 +5,7 @@ Model Context Protocol (MCP) standardizes tool discovery (`tools/list`) and exec
 
 ## Architecture
 - **OpenAPI Catalog**: `src/main/resources/catalogs/mcp-catalog.yaml`
-- **Tool Executor State**: `Execute MCP Tool` in `src/main/resources/tool-executor.sw.yaml`
+- **Tool Executor State**: `Execute MCP Tool` in `src/main/resources/sub_flows/tool-executor.sw.yaml`
 - **REST Endpoints**: `@GET /functions/mcp/tools` and `@POST /functions/mcp/call` in `UtilityResource.java`
 
 ## Supported MCP Tools

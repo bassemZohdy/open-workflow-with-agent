@@ -32,13 +32,7 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
             String base = "http://localhost:" + server.getAddress().getPort();
             return Map.of(
                     "quarkus.rest-client.openaiCatalog.url", base + "/v1",
-                    "quarkus.openapi-generator.openaiCatalog.url", base + "/v1",
-                    "org.kie.kogito.openapi.client.openaiCatalog.url", base + "/v1",
-                    "quarkus.rest-client.openaiCatalog_json.url", base + "/v1",
-                    "quarkus.rest-client.utilityCatalog.url", "http://localhost:8081",
-                    "quarkus.openapi-generator.utilityCatalog.url", "http://localhost:8081",
-                    "org.kie.kogito.openapi.client.utilityCatalog.url", "http://localhost:8081",
-                    "quarkus.rest-client.utilityCatalog_json.url", "http://localhost:8081"
+                    "quarkus.rest-client.utilityCatalog.url", "http://localhost:8081"
             );
         } catch (IOException e) {
             throw new IllegalStateException("Cannot start OpenAI mock API server", e);
@@ -47,7 +41,7 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
 
     private void chatCompletions(HttpExchange exchange) throws IOException {
         String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        int call = llmCalls.incrementAndGet();
+        llmCalls.incrementAndGet();
         lastAuthorizationHeader = exchange.getRequestHeaders().getFirst("Authorization");
 
         String body;

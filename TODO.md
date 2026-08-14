@@ -45,11 +45,11 @@ This document outlines the full feature matrix for extending the **OpenWorkflow 
 - [x] **Step 9**: Implement Planning Sub-Flow (`plan-agent.sw.yaml`).
 - [x] **Step 10**: Implement Sequential Pipeline Sub-Flow (`chain-agent.sw.yaml`).
 - [x] **Step 11**: Implement Supervisor Router Sub-Flow (`supervisor-agent.sw.yaml`).
-- [x] **Step 12**: Update unit test suite (`UtilityResourceTest.java` - 44 test runs) and verify clean build.
+- [x] **Step 12**: Update the utility unit test suite and verify a clean build.
 - [x] **Step 13**: Update documentation & push to GitHub.
 - [x] **Step 14**: Fix broken debug console script (`index.html` had literal `\n` escapes outside string literals, breaking the entire `<script>` block).
 - [x] **Step 15**: Bound the calculator expression parser (`UtilityResource.calculate`) against unbounded recursion (`StackOverflowError`) and non-finite (`Infinity`/`NaN`) results.
-- [x] **Step 16**: Fix native Windows `mvn clean test` failure - bumped Quarkus 3.8.4→3.15.1 and Kogito/SonataFlow 10.0.0→10.1.0 (fixes an upstream `URI.create()` crash on Windows paths) and added an explicit `maven-resources-plugin` execution before Quarkus codegen (the newer codegen needs catalog YAML already copied to `target/classes`). Verified with two clean native builds, 45/45 tests passing.
+- [x] **Step 16**: Fix the native Windows `mvn clean test` failure by aligning the workflow dependencies and copying catalog resources before Quarkus code generation.
 - [x] **Step 17**: Stop `agent-loop.sw.yaml`'s `Inject Agent Defaults` state from unconditionally overwriting a caller-supplied `model` - default now applies only via `(.model // "default-model")` in the `Call LLM` action, so any request or LiteLLM alias can pick the model.
 - [x] **Step 18**: Add optional `UTILITY_API_KEY` bearer-auth filter (`ApiKeyAuthFilter`) and optional `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` global rate limiter (`RateLimitFilter`) - both off by default, gating `/functions/*` and workflow endpoints while leaving `/q/*` management endpoints open.
 - [x] **Step 19**: Bound `memoryStore`/`hitlRequests` in `UtilityResource` with a size-capped, TTL-evicting `BoundedCache` (10k entries, 1h TTL) instead of unbounded `ConcurrentHashMap`s.
@@ -57,6 +57,9 @@ This document outlines the full feature matrix for extending the **OpenWorkflow 
 - [x] **Step 21**: Add `.env.example`, `litellm-config.yaml`, and `ollama`/`ollama-pull`/`litellm` services to `docker-compose.yml` for a self-contained local LLM stack. Validated end-to-end (real completion returned through agent → LiteLLM (authenticated) → Ollama → workflow).
 - [x] **Step 22**: Fix a pre-existing bug where the OpenAI-compatible client never actually sent its bearer token: `quarkus-openapi-generator`'s own auth wiring matches the OpenAPI operation's declared path against the fully-resolved request URI, which never holds once the base URL contributes a path segment (e.g. `/v1`) - so it silently never applied `OPENAI_API_KEY` to real providers. Replaced with `OpenAiBearerTokenFilter`, a small `ClientRequestFilter` registered via `quarkus.rest-client.openaiCatalog.providers`, with a regression test (`AgentLoopSubflowTest`) asserting the header is actually sent.
 - [x] **Step 23**: Add `README.md`/`docs/13-docker-and-compose.md` disclaimers and a "Securing the endpoints" section covering `UTILITY_API_KEY`/`UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE`.
+- [x] **Step 24**: Align Quarkus 3.27.2 with the SonataFlow/Kogito 10.2.0 BOM to prevent a runtime `ReflectiveClassBuildItem` linkage failure during Quarkus test startup.
+- [x] **Step 25**: Add reusable boolean and constrained-choice decision subflows with strict response validation.
+- [x] **Step 26**: Clean up test/build configuration, expand boundary and decision contract coverage, and add CI stages for tests, packaging, deployment validation, and container builds.
 
 ---
 

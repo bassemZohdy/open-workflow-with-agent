@@ -1,0 +1,87 @@
+id: boolean_decision
+version: '1.0'
+specVersion: '0.8'
+name: Boolean Decision
+description: Reusable sub-flow that asks an AI agent for a strict yes/no decision
+start: Validate Input
+
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      openaiCatalog: classpath:/catalogs/openai-compatible.yaml
+
+functions:
+  - name: openaiChatCompletion
+    operation: openaiCatalog#chatCompletions
+
+states:
+  - name: Validate Input
+    type: switch
+    dataConditions:
+      - condition: '${ (.question // "") | type == "string" and ((.question // "") | trim | length > 0) }'
+        transition: Ask Boolean Question
+    defaultCondition:
+      transition: Invalid Input
+
+  - name: Ask Boolean Question
+    type: operation
+    actions:
+      - name: Generate Boolean Decision
+        functionRef:
+          refName: openaiChatCompletion
+          arguments:
+            model: 'default-model'
+            temperature: 0
+            max_tokens: 8
+            messages:
+              - role: system
+                content: >-
+                  You are a strict boolean decision service. Answer with exactly one
+                  word: yes or no. Do not include punctuation, explanation, markdown,
+                  or any other text.
+              - role: user
+                content: '${ .question }'
+        actionDataFilter:
+          toStateData: '.llm_response'
+    transition: Evaluate Boolean Answer
+
+  - name: Evaluate Boolean Answer
+    type: switch
+    dataConditions:
+      - condition: '${ (((.llm_response.choices[0].message.content // "") | trim | ascii_downcase) == "yes") }'
+        transition: Return Yes
+      - condition: '${ (((.llm_response.choices[0].message.content // "") | trim | ascii_downcase) == "no") }'
+        transition: Return No
+    defaultCondition:
+      transition: Invalid Model Answer
+
+  - name: Return Yes
+    type: inject
+    data:
+      valid: true
+      decision: true
+      answer: yes
+    end: true
+
+  - name: Return No
+    type: inject
+    data:
+      valid: true
+      decision: false
+      answer: no
+    end: true
+
+  - name: Invalid Input
+    type: inject
+    data:
+      valid: false
+      error: question is required
+    end: true
+
+  - name: Invalid Model Answer
+    type: inject
+    data:
+      valid: false
+      error: AI response was not exactly yes or no
+      raw_answer: '${ .llm_response.choices[0].message.content // "" }'
+    end: true

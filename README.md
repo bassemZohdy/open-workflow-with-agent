@@ -13,19 +13,19 @@ This project provides the **Reference Implementation** for extending the **OpenW
 
 | Pattern / Feature Category | Description | Workflow Sub-Flow Implementation | OpenAPI Catalog Registry |
 | :--- | :--- | :--- | :--- |
-| **1. Autonomous Reasoning Loop** | Bounded multi-turn tool execution loop with iteration guardrails | [`agent-loop.sw.yaml`](src/main/resources/agent-loop.sw.yaml) | [`openai-compatible.yaml`](src/main/resources/catalogs/openai-compatible.yaml) |
-| **2. Dynamic Tool Execution** | Generic OpenAPI catalog tool router | [`tool-executor.sw.yaml`](src/main/resources/tool-executor.sw.yaml) | [`utility-functions.yaml`](src/main/resources/catalogs/utility-functions.yaml) |
-| **3. Model Context Protocol (MCP)** | Open protocol for JSON-RPC / OpenAPI tool discovery & call | [`tool-executor.sw.yaml`](src/main/resources/tool-executor.sw.yaml) | [`mcp-catalog.yaml`](src/main/resources/catalogs/mcp-catalog.yaml) |
-| **4. Agent-to-Agent (A2A)** | Peer & sub-agent directory lookup and task delegation | [`tool-executor.sw.yaml`](src/main/resources/tool-executor.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
-| **5. Short & Long-Term Memory** | Context buffer storage, key-value retrieval & vector memory search | [`tool-executor.sw.yaml`](src/main/resources/tool-executor.sw.yaml) | [`memory-catalog.yaml`](src/main/resources/catalogs/memory-catalog.yaml) |
-| **6. Human-in-the-Loop (HITL)** | Pausing workflow execution pending human approval for sensitive actions | [`hitl-gate.sw.yaml`](src/main/resources/hitl-gate.sw.yaml) | [`hitl-catalog.yaml`](src/main/resources/catalogs/hitl-catalog.yaml) |
-| **7. Output Guardrails** | Structured JSON schema validation and response safety verification | [`reflection-agent.sw.yaml`](src/main/resources/reflection-agent.sw.yaml) | [`guardrails-catalog.yaml`](src/main/resources/catalogs/guardrails-catalog.yaml) |
-| **8. Parallel Fan-Out / Fan-In** | Concurrent multi-agent task execution across sub-agents | [`parallel-agent.sw.yaml`](src/main/resources/parallel-agent.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
-| **9. Self-Reflection & Critique** | Recursive generation -> Critique -> Refinement self-improvement loop | [`reflection-agent.sw.yaml`](src/main/resources/reflection-agent.sw.yaml) | [`guardrails-catalog.yaml`](src/main/resources/catalogs/guardrails-catalog.yaml) |
-| **10. Planning & Decomposition** | High-level goal decomposition into ordered sub-task plans | [`plan-agent.sw.yaml`](src/main/resources/plan-agent.sw.yaml) | [`planner-catalog.yaml`](src/main/resources/catalogs/planner-catalog.yaml) |
-| **11. Sequential Pipeline** | Step-by-step multi-agent pipeline (Research -> Code -> Review) | [`chain-agent.sw.yaml`](src/main/resources/chain-agent.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
-| **12. Supervisor / Worker Router** | Dynamic supervisor routing tasks to specialized worker sub-agents | [`supervisor-agent.sw.yaml`](src/main/resources/supervisor-agent.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
-| **13. Multi-Provider Fallback** | Provider failover routing across primary and backup LLM services | [`agent-loop.sw.yaml`](src/main/resources/agent-loop.sw.yaml) | [`fallback-catalog.yaml`](src/main/resources/catalogs/fallback-catalog.yaml) |
+| **1. Autonomous Reasoning Loop** | Bounded multi-turn tool execution loop with iteration guardrails | [`agent-loop.sw.yaml`](src/main/resources/sub_flows/agent-loop.sw.yaml) | [`openai-compatible.yaml`](src/main/resources/catalogs/openai-compatible.yaml) |
+| **2. Dynamic Tool Execution** | Generic OpenAPI catalog tool router | [`tool-executor.sw.yaml`](src/main/resources/sub_flows/tool-executor.sw.yaml) | [`utility-functions.yaml`](src/main/resources/catalogs/utility-functions.yaml) |
+| **3. Model Context Protocol (MCP)** | Open protocol for JSON-RPC / OpenAPI tool discovery & call | [`tool-executor.sw.yaml`](src/main/resources/sub_flows/tool-executor.sw.yaml) | [`mcp-catalog.yaml`](src/main/resources/catalogs/mcp-catalog.yaml) |
+| **4. Agent-to-Agent (A2A)** | Peer & sub-agent directory lookup and task delegation | [`tool-executor.sw.yaml`](src/main/resources/sub_flows/tool-executor.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
+| **5. Short & Long-Term Memory** | Context buffer storage, key-value retrieval & vector memory search | [`tool-executor.sw.yaml`](src/main/resources/sub_flows/tool-executor.sw.yaml) | [`memory-catalog.yaml`](src/main/resources/catalogs/memory-catalog.yaml) |
+| **6. Human-in-the-Loop (HITL)** | Pausing workflow execution pending human approval for sensitive actions | [`hitl-gate.sw.yaml`](src/main/resources/sub_flows/hitl-gate.sw.yaml) | [`hitl-catalog.yaml`](src/main/resources/catalogs/hitl-catalog.yaml) |
+| **7. Output Guardrails** | Structured JSON schema validation and response safety verification | [`reflection-agent.sw.yaml`](src/main/resources/sub_flows/reflection-agent.sw.yaml) | [`guardrails-catalog.yaml`](src/main/resources/catalogs/guardrails-catalog.yaml) |
+| **8. Parallel Fan-Out / Fan-In** | Concurrent multi-agent task execution across sub-agents | [`parallel-agent.sw.yaml`](src/main/resources/sub_flows/parallel-agent.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
+| **9. Self-Reflection & Critique** | Recursive generation -> Critique -> Refinement self-improvement loop | [`reflection-agent.sw.yaml`](src/main/resources/sub_flows/reflection-agent.sw.yaml) | [`guardrails-catalog.yaml`](src/main/resources/catalogs/guardrails-catalog.yaml) |
+| **10. Planning & Decomposition** | High-level goal decomposition into ordered sub-task plans | [`plan-agent.sw.yaml`](src/main/resources/sub_flows/plan-agent.sw.yaml) | [`planner-catalog.yaml`](src/main/resources/catalogs/planner-catalog.yaml) |
+| **11. Sequential Pipeline** | Step-by-step multi-agent pipeline (Research -> Code -> Review) | [`chain-agent.sw.yaml`](src/main/resources/sub_flows/chain-agent.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
+| **12. Supervisor / Worker Router** | Dynamic supervisor routing tasks to specialized worker sub-agents | [`supervisor-agent.sw.yaml`](src/main/resources/sub_flows/supervisor-agent.sw.yaml) | [`a2a-catalog.yaml`](src/main/resources/catalogs/a2a-catalog.yaml) |
+| **13. Multi-Provider Fallback** | Provider failover routing across primary and backup LLM services | [`agent-loop.sw.yaml`](src/main/resources/sub_flows/agent-loop.sw.yaml) | [`fallback-catalog.yaml`](src/main/resources/catalogs/fallback-catalog.yaml) |
 | **14. Generic Message Appender** | Universal formatting of tool outputs into prompt state history | Expression (`appendToolResult`) | N/A |
 
 ---
@@ -57,8 +57,9 @@ OpenWorkflow Entry Point (llm_tool_agent)
 ## Core Components
 
 * **Parent Workflow** ([`llm-tool-agent.sw.yaml`](src/main/resources/llm-tool-agent.sw.yaml)): Serves as the public HTTP entry point delegating directly to `agent_loop`.
-* **Agent Loop Sub-Flow** ([`agent-loop.sw.yaml`](src/main/resources/agent-loop.sw.yaml)): Manages prompt assembly, LLM execution, generic message formatting, and iteration limits.
-* **Tool Executor Sub-Flow** ([`tool-executor.sw.yaml`](src/main/resources/tool-executor.sw.yaml)): Dedicated sub-flow routing execution across Utility, MCP, A2A, Memory, HITL, and Guardrails catalog functions.
+* **Agent Loop Sub-Flow** ([`agent-loop.sw.yaml`](src/main/resources/sub_flows/agent-loop.sw.yaml)): Manages prompt assembly, LLM execution, generic message formatting, and iteration limits.
+* **Tool Executor Sub-Flow** ([`tool-executor.sw.yaml`](src/main/resources/sub_flows/tool-executor.sw.yaml)): Dedicated sub-flow routing execution across Utility, MCP, A2A, Memory, HITL, and Guardrails catalog functions.
+* **Decision Sub-Flows** ([`boolean-decision.sw.yaml`](src/main/resources/sub_flows/boolean-decision.sw.yaml) and [`choice-decision.sw.yaml`](src/main/resources/sub_flows/choice-decision.sw.yaml)): Strict typed AI decisions returning either yes/no or one value from a caller-provided option list.
 * **Local REST Utility Service** ([`UtilityResource`](src/main/java/org/acme/functions/UtilityResource.java)): JAX-RS endpoints providing local execution for all catalog operations.
 
 ---
@@ -148,9 +149,12 @@ mvn clean test
 ```
 
 The test suite covers:
-* [`UtilityResourceTest`](src/test/java/org/acme/functions/UtilityResourceTest.java): Comprehensive unit tests (44 test runs) covering arithmetic operator precedence, negative/decimal numbers, whitespace handling, null/blank validation, multi-timezone resolution, MCP tool discovery/execution, A2A sub-agent delegation, Memory storage/retrieval/search, HITL approval requests/decisions, Output Guardrails JSON validation, Multi-Provider LLM Fallback chat completions, and Task Planning/Decomposition.
+* [`UtilityResourceTest`](src/test/java/org/acme/functions/UtilityResourceTest.java): Comprehensive unit tests covering arithmetic, timezone handling, MCP, A2A, memory, HITL, guardrails, fallback, planning, validation failures, and boundary conditions.
+* [`DecisionSubflowContractTest`](src/test/java/org/acme/functions/DecisionSubflowContractTest.java): Contract coverage for strict boolean and constrained-choice subflow inputs, outputs, and invalid-answer handling.
 * [`AgentLoopSubflowTest`](src/test/java/org/acme/functions/AgentLoopSubflowTest.java): End-to-end integration tests using [`OpenAiMockApiResource`](src/test/java/org/acme/functions/OpenAiMockApiResource.java) supporting multi-turn tool call handling (`calculate`, `get_current_time`), direct text completions, and a regression check that the bearer token is actually sent to the LLM provider.
 * [`ApiKeyAuthFilterTest`](src/test/java/org/acme/functions/ApiKeyAuthFilterTest.java) & [`RateLimitFilterTest`](src/test/java/org/acme/functions/RateLimitFilterTest.java): Verify the optional `UTILITY_API_KEY` and `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` gates behave correctly when enabled, and never block `/q/*` management endpoints.
+
+CI runs the Maven suite, packages the application, validates the Kubernetes/OpenShift Kustomize package, and builds the Docker image. Test reports are uploaded as workflow artifacts when available.
 
 ---
 

@@ -4,7 +4,7 @@
 The Autonomous Reasoning Loop encapsulates multi-turn LLM execution, function tool selection, output message state formatting, and loop termination guardrails within a reusable OpenWorkflow sub-flow.
 
 ## Architecture
-- **Sub-Flow**: `src/main/resources/agent-loop.sw.yaml` (id: `agent_loop`)
+- **Sub-Flow**: `src/main/resources/sub_flows/agent-loop.sw.yaml` (id: `agent_loop`)
 - **OpenAPI Catalog**: `src/main/resources/catalogs/openai-compatible.yaml`
 - **Generic Appender Expression**: `appendToolResult`
 

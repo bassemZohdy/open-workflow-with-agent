@@ -2,15 +2,21 @@ name: Agentic OpenWorkflow CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build, Test & Validate Container
+  test:
+    name: Test and package
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -19,11 +25,46 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
           cache: maven
 
-      - name: Build and execute test suite
-        run: mvn clean test --batch-mode
+      - name: Run test suite
+        run: mvn --batch-mode --no-transfer-progress clean test
 
-      - name: Build Docker Container Image
-        run: docker build . --file Dockerfile --tag llm-tool-agent:latest
+      - name: Package application
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          if-no-files-found: ignore
+
+  validate-deployment:
+    name: Validate deployment manifests
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Validate Kustomize package
+        run: kubectl kustomize deploy --load-restrictor LoadRestrictionsNone >/dev/null
+
+  container:
+    name: Build container image
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build Docker image
+        run: docker build --file Dockerfile --tag llm-tool-agent:${{ github.sha }} .
+
+      - name: Inspect Docker image
+        run: docker image inspect llm-tool-agent:${{ github.sha }}
