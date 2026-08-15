@@ -6,6 +6,16 @@ Reusable workflow definitions are organized under `src/main/resources/sub_flows/
 
 The reusable decision subflows [boolean-decision.sw.yaml](../src/main/resources/sub_flows/boolean-decision.sw.yaml) and [choice-decision.sw.yaml](../src/main/resources/sub_flows/choice-decision.sw.yaml) provide strict typed decisions for workflows that need a yes/no answer or one value from an allowed list.
 
+> **Orchestration-only sub-flows**: `parallel-agent`, `chain-agent`, `supervisor-agent`, and
+> `reflection-agent` demonstrate orchestration only and never invoke the LLM - they call mock A2A
+> endpoints. See each pattern doc for details. `agent_loop` (via `llm_tool_agent`) and `plan_agent`
+> are the LLM-driven entry points.
+
+> **Server-side guardrails**: the public `llm_tool_agent` entry validates messages (count/length),
+> restricts roles to `user`/`assistant`, and enforces a model allowlist in the workflow itself;
+> `agent_loop` clamps `max_tokens` and truncates history. Tool HTTP errors are converted into
+> tool-result errors (fed back to the LLM) via `onErrors` in `tool-executor.sw.yaml`/`agent-loop.sw.yaml`.
+
 ---
 
 ## Technical Documentation Modules

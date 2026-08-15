@@ -1,7 +1,7 @@
-# Container Image Build & Infrastructure Integration (PostgreSQL & Redis)
+# Container Image Build & Infrastructure Integration (PostgreSQL, Redis, LiteLLM, Ollama)
 
 ## Overview
-This document describes containerizing the **Agentic OpenWorkflow Reference Implementation** using multi-stage Docker builds and orchestrating runtime infrastructure with **PostgreSQL** (workflow state persistence) and **Redis** (agent short-term memory & caching).
+This document describes containerizing the **Agentic OpenWorkflow Reference Implementation** using multi-stage Docker builds and orchestrating runtime infrastructure with **PostgreSQL** (workflow state persistence), **Redis** (agent short-term memory & caching), and a self-contained **LiteLLM + Ollama** LLM stack.
 
 ---
 
@@ -11,10 +11,17 @@ The container build uses a multi-stage `Dockerfile`:
 - **Stage 1 (Builder)**: Uses `maven:3.9.6-eclipse-temurin-17` to compile the Java microservice and package the Quarkus Fast-JAR bundle.
 - **Stage 2 (Runtime)**: Uses lightweight `eclipse-temurin:17-jre-alpine` runtime image exposed on port `8080`.
 
+The runtime entrypoint is [`docker-entrypoint.sh`](../docker-entrypoint.sh), which injects the scoped LiteLLM virtual key (see below) before starting Quarkus.
+
 ### Build Command
 ```bash
 docker build . --file Dockerfile --tag llm-tool-agent:latest
 ```
+
+> [!IMPORTANT]
+> The `%prod` Quarkus profile (used by this image) **refuses to start without `UTILITY_API_KEY`**
+> (fail-fast, enforced by `ProdSecurityDefaults`) and enables a default 600 req/min rate cap. See
+> "Securing the endpoints" in the README.
 
 ---
 
@@ -23,21 +30,29 @@ docker build . --file Dockerfile --tag llm-tool-agent:latest
 The runtime stack is defined in [`docker-compose.yml`](../docker-compose.yml) and includes:
 
 1. **`openworkflow-agent`**: The compiled microservice container.
-2. **`postgres` (PostgreSQL 16)**: Relational database providing durable state persistence for long-running workflows (`QUARKUS_DATASOURCE_*`).
-3. **`redis` (Redis 7)**: In-memory cache providing sub-millisecond agent short-term memory retrieval (`QUARKUS_REDIS_*`).
-4. **`ollama`**: Local model runtime, purely so the stack is runnable end-to-end with no external account. Swap it out for any other OpenAI-compatible provider without touching workflow code.
+2. **`postgres` (PostgreSQL 16.15)**: Durable state persistence for long-running workflows (`QUARKUS_DATASOURCE_*`). Also hosts a separate `litellm_db` database (created by [`postgres-init/01-create-litellm-db.sql`](../postgres-init/01-create-litellm-db.sql)) for LiteLLM's virtual-key store.
+3. **`redis` (Redis 7.4)**: In-memory agent short-term memory (`QUARKUS_REDIS_*`). Runs with `--requirepass` using `REDIS_PASSWORD`.
+4. **`ollama` (pinned 0.32.13)**: Local model runtime, purely so the stack is runnable end-to-end with no external account.
 5. **`ollama-pull`**: One-shot job that pulls `OLLAMA_MODEL` into `ollama` on first start, then exits.
-6. **`litellm`**: Generic OpenAI-compatible proxy in front of `ollama` (or any other backend - see [`litellm-config.yaml`](../litellm-config.yaml)). This is the single integration point the workflows talk to via `OPENAI_BASE_URL`/`OPENAI_API_KEY`; the application and workflow YAML never hardcode a provider or model.
+6. **`litellm` (pinned v1.96.2)**: Generic OpenAI-compatible proxy in front of `ollama` (or any other backend - see [`litellm-config.yaml`](../litellm-config.yaml)). Backed by `litellm_db` for key management and spend tracking.
+7. **`litellm-keygen`**: One-shot job that provisions a **scoped virtual key** (`models=[default-model]`, `max_budget=5.0`) and writes it to the shared `litellm_keys` volume, which the agent container reads at startup.
+
+### Network exposure & credentials (hardened defaults)
+- **Every published port is bound to loopback** (`127.0.0.1`): `8080`, `5432`, `6379`, `11434`, `4000`. Nothing is exposed to the LAN.
+- **No insecure default credentials exist.** `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `LITELLM_MASTER_KEY`, and `UTILITY_API_KEY` are REQUIRED: `docker compose up` fails fast with a clear message when any is unset (no `sk-litellm-local-dev` / `openworkflow_secret` fallbacks).
+- **The application never authenticates to LiteLLM with the master key.** `litellm-keygen` uses the master key once to create a scoped virtual key (model allowlist + budget cap); the app only ever holds that scoped key.
+- **Image tags are pinned** to specific versions (no `latest`/`main-latest` drift).
 
 ### Configuration
 
-Copy [`.env.example`](../.env.example) to `.env` and adjust values - `docker compose` reads `.env` automatically. See that file for every variable and its default.
+Copy [`.env.example`](../.env.example) to `.env` and fill in the REQUIRED values - `docker compose` reads `.env` automatically. See that file for every variable and its meaning.
 
 ### Docker Compose Commands
 
 Start the full stack:
 ```bash
 cp .env.example .env
+# ... edit .env and set the required secrets ...
 docker compose up -d
 ```
 
@@ -54,20 +69,23 @@ docker compose down -v
 ### Swapping the LLM backend
 
 To point at a different provider instead of the bundled Ollama/LiteLLM pair:
-- **Direct**: set `OPENAI_BASE_URL`/`OPENAI_API_KEY` in `.env` to the provider's own OpenAI-compatible endpoint and drop the `litellm`/`ollama`/`ollama-pull` services from `docker-compose.yml`.
+- **Direct**: set `OPENAI_BASE_URL`/`OPENAI_API_KEY` in `.env` to the provider's own OpenAI-compatible endpoint and drop the `litellm`/`ollama`/`ollama-pull`/`litellm-keygen` services from `docker-compose.yml`.
 - **Via LiteLLM**: keep `OPENAI_BASE_URL=http://litellm:4000/v1` and edit [`litellm-config.yaml`](../litellm-config.yaml)'s `model_list` to route the `default-model` alias at any LiteLLM-supported backend (vLLM, a hosted API, etc.).
 
 ---
 
 ## 3. Environment Variables Configuration
 
-| Variable | Description | Default Value |
+| Variable | Required? | Description |
 | :--- | :--- | :--- |
-| `OPENAI_BASE_URL` | Base URL for OpenAI-compatible LLM provider | `http://litellm:4000/v1` |
-| `OPENAI_API_KEY` | Bearer token sent to that provider. Must equal `LITELLM_MASTER_KEY` when routing through the bundled LiteLLM (it has no key-management database, so it only accepts its own master key) | `sk-litellm-local-dev` |
-| `LITELLM_MASTER_KEY` | LiteLLM's own admin/API key | `sk-litellm-local-dev` |
-| `OLLAMA_MODEL` | Model pulled into `ollama` on first start; must match `litellm-config.yaml`'s backend model | `llama3.1` |
-| `UTILITY_API_KEY` | Optional bearer key gating this app's own `/functions/*` and workflow endpoints. Blank disables auth | *(blank)* |
-| `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` | Optional global request-rate cap. `0` disables it | `0` |
-| `QUARKUS_DATASOURCE_JDBC_URL` | PostgreSQL JDBC connection URL | `jdbc:postgresql://postgres:5432/openworkflow_db` |
-| `QUARKUS_REDIS_HOSTS` | Redis connection URL | `redis://redis:6379` |
+| `OPENAI_BASE_URL` | no | Base URL for OpenAI-compatible LLM provider (default `http://litellm:4000/v1`) |
+| `OPENAI_API_KEY` | no | Optional explicit provider key. When unset, the app reads the scoped LiteLLM virtual key generated by `litellm-keygen` from `/keys/openai_api_key` |
+| `LITELLM_MASTER_KEY` | **yes** | LiteLLM admin key - used ONLY by `litellm-keygen` to provision the scoped key; never given to the app |
+| `UTILITY_API_KEY` | **yes** | Bearer key gating this app's `/functions/*` and workflow endpoints; the %prod profile fails startup without it |
+| `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` | no | Global request-rate cap (default `600` in %prod, `0` disables) |
+| `POSTGRES_PASSWORD` | **yes** | PostgreSQL password (also used for the `litellm_db` database) |
+| `POSTGRES_USER` | no | PostgreSQL user (default `openworkflow`) |
+| `REDIS_PASSWORD` | **yes** | Redis `--requirepass` password; avoid `@ : / ?` (embedded in the connection URL) |
+| `OLLAMA_MODEL` | no | Model pulled into `ollama` on first start (default `llama3.1`); must match `litellm-config.yaml`'s backend model |
+| `QUARKUS_DATASOURCE_JDBC_URL` | no | PostgreSQL JDBC connection URL (compose default `jdbc:postgresql://postgres:5432/openworkflow_db`) |
+| `QUARKUS_REDIS_HOSTS` | no | Redis connection URL (compose default `redis://:<REDIS_PASSWORD>@redis:6379`) |

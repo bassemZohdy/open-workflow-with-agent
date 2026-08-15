@@ -17,7 +17,12 @@ COPY --from=builder /workspace/target/quarkus-app/*.jar /deployments/
 COPY --from=builder /workspace/target/quarkus-app/app/ /deployments/app/
 COPY --from=builder /workspace/target/quarkus-app/quarkus/ /deployments/quarkus/
 
+# Runtime entrypoint: injects the scoped LiteLLM virtual key (see docker-compose.yml / litellm-keygen)
+# before starting Quarkus.
+COPY docker-entrypoint.sh /deployments/docker-entrypoint.sh
+RUN chmod +x /deployments/docker-entrypoint.sh
+
 EXPOSE 8080
 USER 1001
 
-ENTRYPOINT ["java", "-jar", "/deployments/quarkus-run.jar"]
+ENTRYPOINT ["/deployments/docker-entrypoint.sh"]

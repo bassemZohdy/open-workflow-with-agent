@@ -16,12 +16,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [action_name, description]
+              required: [action_name]
               properties:
                 action_name:
                   type: string
                 description:
                   type: string
+                  description: Optional human-readable description; defaults to "Human approval required" when omitted.
       responses:
         '200':
           description: Approval request created
@@ -40,15 +41,26 @@ paths:
           application/json:
             schema:
               type: object
-              required: [request_id, approved]
+              required: [request_id]
               properties:
                 request_id:
                   type: string
                 approved:
                   type: boolean
+                  description: Defaults to false (deny) when omitted - decisions fail closed.
+                approved_by:
+                  type: string
+                  description: Optional identity of the human approver, recorded on the request.
       responses:
         '200':
           description: Approval decision recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          description: Unknown request_id
           content:
             application/json:
               schema:

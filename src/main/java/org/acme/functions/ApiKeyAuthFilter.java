@@ -17,11 +17,12 @@ import jakarta.ws.rs.ext.Provider;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-/**
+/*
  * Gates every JAX-RS request behind a bearer API key when {@code utility.api-key}
  * (env var {@code UTILITY_API_KEY}) is configured. Left unset, auth is skipped entirely
  * so the demo console, curl examples, and tests keep working unchanged - set it before
- * exposing this service beyond localhost.
+ * exposing this service beyond localhost. In the %prod profile, {@link ProdSecurityDefaults}
+ * additionally refuses to start with auth disabled (fail-fast instead of shipping fully open).
  */
 @Provider
 @Priority(Priorities.AUTHENTICATION)

@@ -18,8 +18,24 @@ spec:
     specVersion: '0.8'
     name: LLM Tool Agent
     description: Public workflow entry point delegating to the reusable agent loop subflow
-    start: Run Agent Loop
+    start: Validate Request
     states:
+      # Mirrors src/main/resources/llm-tool-agent.sw.yaml: server-side request guardrails live in
+      # the workflow itself so they deploy with the workflow on OpenShift Serverless Logic.
+      - name: Validate Request
+        type: switch
+        dataConditions:
+          - condition: >-
+              ${ ((.messages // []) | type == "array") and ((.messages | length) >= 1) and ((.messages | length) <= 20)
+                 and all(.messages[]; ((.content // "") | type == "string") and ((.content // "" | length) <= 8192))
+                 and all(.messages[]; (.role == "user") or (.role == "assistant"))
+                 and ((.model // "default-model") as $m
+                      | ["default-model", "llama3.1", "llama3.2", "llama3.3", "gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "claude-3-5-haiku"]
+                        | any(. == $m)) }
+            transition: Run Agent Loop
+        defaultCondition:
+          transition: Invalid Request
+
       - name: Run Agent Loop
         type: operation
         actions:
@@ -27,6 +43,15 @@ spec:
             subFlowRef: agent_loop
             actionDataFilter:
               useResults: true
+        end: true
+
+      - name: Invalid Request
+        type: inject
+        data:
+          error: >-
+            request failed server-side validation: messages must be an array of 1-20 entries with
+            string content of at most 8192 chars, roles limited to user|assistant, and model must be
+            in the workflow allowlist
         end: true
   podTemplate:
     container:
@@ -42,4 +67,12 @@ spec:
             secretKeyRef:
               name: openai-credentials
               key: OPENAI_API_KEY
-
+        # The %prod profile requires this key - provide it via the same secret (see
+        # openai-credentials.example.yaml). On OpenShift, provision the LLM key as a scoped
+        # LiteLLM virtual key rather than the master key (same model allowlist + budget cap
+        # story as docker-compose's litellm-keygen service).
+        - name: UTILITY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-credentials
+              key: UTILITY_API_KEY

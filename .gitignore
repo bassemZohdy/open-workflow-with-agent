@@ -20,3 +20,9 @@ deploy/*credentials.yaml
 !deploy/litellm-credentials.example.yaml
 .env
 !.env.example
+
+# Playwright E2E artifacts
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/

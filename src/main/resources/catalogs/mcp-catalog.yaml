@@ -6,18 +6,6 @@ info:
 servers:
   - url: /
 paths:
-  /functions/mcp/tools:
-    get:
-      operationId: listMcpTools
-      summary: List registered MCP tools
-      responses:
-        '200':
-          description: List of MCP tools
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
   /functions/mcp/call:
     post:
       operationId: callMcpTool

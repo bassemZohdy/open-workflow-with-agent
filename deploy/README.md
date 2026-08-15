@@ -30,7 +30,7 @@ Before applying manifests, update `spec.podTemplate.container.image` in [`sonata
 
 ## Configure Credentials
 
-Copy [`openai-credentials.example.yaml`](openai-credentials.example.yaml) to `openai-credentials.yaml`, populate `OPENAI_BASE_URL` and `OPENAI_API_KEY`, and apply the Secret:
+Copy [`openai-credentials.example.yaml`](openai-credentials.example.yaml) to `openai-credentials.yaml`, populate `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `UTILITY_API_KEY`, and apply the Secret:
 
 ```bash
 oc apply -f deploy/openai-credentials.yaml -n "$NAMESPACE"
@@ -38,6 +38,10 @@ oc apply -f deploy/openai-credentials.yaml -n "$NAMESPACE"
 
 > [!WARNING]
 > Do not commit populated `openai-credentials.yaml` secrets to version control.
+
+Notes:
+- `UTILITY_API_KEY` is **required** by the `%prod` profile (the app refuses to start without it) - generate one with `openssl rand -hex 24`.
+- When `OPENAI_BASE_URL` points at a LiteLLM proxy, provision a **scoped virtual key** (model allowlist + budget cap) via LiteLLM's `/key/generate` endpoint and use that as `OPENAI_API_KEY` - never the proxy's master key, which carries key-management/spend privileges (see the `litellm-keygen` service in `docker-compose.yml` for the same pattern).
 
 ---
 
@@ -63,6 +67,7 @@ WORKFLOW_SVC=$(oc get route/llm-tool-agent -n "$NAMESPACE" -o jsonpath='{.spec.h
 
 curl -X POST "http://${WORKFLOW_SVC}/llm_tool_agent" \
   -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $UTILITY_API_KEY" \
   -d '{
     "messages": [{"role": "user", "content": "Reply with exactly: sonataflow-openshift-ok"}],
     "temperature": 0,

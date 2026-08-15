@@ -5,6 +5,17 @@ name: Agent Loop
 description: Reusable YAML agent loop using OpenAPI resource catalogs and sub-flow tool execution
 start: Inject Agent Defaults
 
+# Workflow-level error handling. SonataFlow surfaces catalog HTTP errors as
+# WorkItemExecutionException carrying the HTTP status as its error code, so the codes below
+# match 4xx/5xx responses from the tool catalogs and the LLM provider. tool_executor converts
+# tool HTTP errors into structured tool_result errors itself; the handlers here are defense in
+# depth for anything that escapes the sub-flow (and for LLM-provider failures).
+errors:
+  - name: ToolHttpError
+    code: "400"
+  - name: ToolServerError
+    code: "500"
+
 extensions:
   - extensionid: workflow-uri-definitions
     definitions:
@@ -13,6 +24,10 @@ extensions:
 functions:
   - name: openaiChatCompletion
     operation: openaiCatalog#chatCompletions
+  # Delimits and length-caps the tool result appended to the conversation, marking tool output
+  # as UNTRUSTED at the tool->LLM boundary (indirect prompt-injection defense, OWASP LLM01/ASI06):
+  # the model is told explicitly that the content between the markers is tool output, and the
+  # payload is truncated so a multi-MB result cannot bloat the context.
   - name: appendToolResult
     type: expression
     operation: >-
@@ -22,10 +37,16 @@ functions:
         tool_calls: (.choices[0].message.tool_calls | map(.function.arguments |= (if type == "string" then . else tojson end)))
       },
         {role: "tool",
-         tool_call_id: .choices[0].message.tool_calls[0].id,
-         name: .choices[0].message.tool_calls[0].function.name,
-         content: (.tool_result | tojson)}
+         tool_call_id: (.choices[0].message.tool_calls[0].id // "unknown"),
+         name: (.choices[0].message.tool_calls[0].function.name // "unknown"),
+         content: ("<untrusted_tool_output>\n" + ((.tool_result | tojson) | .[0:2000]) + "\n</untrusted_tool_output>")}
       ]), tool_iterations: (.tool_iterations + 1)}
+  # Produces a structured error tool_result when the tool sub-flow fails at the workflow level.
+  - name: toolError
+    type: expression
+    operation: >-
+      {error: "tool execution failed with an HTTP error from the utility catalog",
+       tool_call_id: (.choices[0].message.tool_calls[0].id // "unknown")}
 
 states:
   - name: Inject Agent Defaults
@@ -94,15 +115,22 @@ states:
         functionRef:
           refName: openaiChatCompletion
           arguments:
-            # Caller-supplied "model" in the request body always wins. "default-model" is
-            # just a fallback alias - point it at any backend (Ollama, vLLM, OpenAI, etc.)
-            # via the OPENAI_BASE_URL provider (e.g. a LiteLLM model alias), so the workflow
-            # itself never hardcodes a specific vendor/model.
+            # Caller-supplied "model" in the request body always wins (subject to the entry
+            # workflow's allowlist). "default-model" is just a fallback alias - point it at any
+            # backend (Ollama, vLLM, OpenAI, etc.) via the OPENAI_BASE_URL provider (e.g. a
+            # LiteLLM model alias), so the workflow itself never hardcodes a specific vendor/model.
             model: (.model // "default-model")
-            messages: .messages
+            # Server-side clamps applied in the workflow itself: cap max_tokens at 4096 and keep
+            # the message history bounded to the most recent 20 messages.
+            messages: (.messages | if (length > 20) then .[-20:] else . end)
             temperature: .temperature
-            max_tokens: .max_tokens
+            max_tokens: ((.max_tokens // 512) | if . > 4096 then 4096 else . end)
             tools: .tools
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: LLM Call Failed
+      - errorRef: ToolServerError
+        transition: LLM Call Failed
     transition: Inspect LLM Response
 
   - name: Inspect LLM Response
@@ -122,12 +150,32 @@ states:
         subFlowRef: tool_executor
         actionDataFilter:
           useResults: true
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Handle Tool Error
+      - errorRef: ToolServerError
+        transition: Handle Tool Error
     transition: Append Tool Result
 
   - name: Append Tool Result
     type: operation
     actions:
       - name: Append Tool Message
+        functionRef:
+          refName: appendToolResult
+    transition: Call LLM
+
+  # Defense in depth: any tool error escaping tool_executor becomes a normal tool result fed
+  # back to the LLM (which can then retry or explain), instead of crashing the parent workflow.
+  - name: Handle Tool Error
+    type: operation
+    actions:
+      - name: Record Tool Error
+        functionRef:
+          refName: toolError
+        actionDataFilter:
+          toStateData: '.tool_result'
+      - name: Append Tool Error Message
         functionRef:
           refName: appendToolResult
     transition: Call LLM
@@ -141,4 +189,10 @@ states:
     type: inject
     data:
       error: Maximum tool iterations reached
+    end: true
+
+  - name: LLM Call Failed
+    type: inject
+    data:
+      error: LLM call failed with an HTTP error from the provider
     end: true

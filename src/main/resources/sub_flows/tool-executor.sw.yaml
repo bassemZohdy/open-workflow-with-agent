@@ -5,6 +5,16 @@ name: Tool Executor
 description: Reusable sub-flow for dispatching tool calls to OpenAPI resource catalogs (Utilities, MCP, A2A, Memory, HITL, Guardrails)
 start: Route Tool Call
 
+# Any tool-catalog HTTP error (4xx/5xx - SonataFlow surfaces these as WorkItemExecutionException
+# carrying the HTTP status as its error code) is converted into a structured `tool_result.error`
+# instead of crashing the parent workflow, so the agent loop can feed the failure back to the LLM
+# as an ordinary tool result.
+errors:
+  - name: ToolHttpError
+    code: "400"
+  - name: ToolServerError
+    code: "500"
+
 extensions:
   - extensionid: workflow-uri-definitions
     definitions:
@@ -34,6 +44,12 @@ functions:
     operation: hitlCatalog#requestApproval
   - name: validateOutput
     operation: guardrailsCatalog#validateOutput
+  # Single reusable parser for the tool-call arguments object. Every execute state below runs
+  # this first (storing the result in `.tool_args`) and then references `.tool_args.<field>`,
+  # instead of copy-pasting the fromjson-else-identity pipeline ten times.
+  - name: toolArgs
+    type: expression
+    operation: '(.choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end)'
 
 states:
   - name: Route Tool Call
@@ -63,115 +79,215 @@ states:
   - name: Execute Time Tool
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Get Current Time
         functionRef:
           refName: getCurrentTime
           arguments:
-            timezone: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .timezone }'
+            timezone: '${ .tool_args.timezone }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute Calculator Tool
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Calculate
         functionRef:
           refName: calculate
           arguments:
-            expression: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .expression }'
+            expression: '${ .tool_args.expression }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute MCP Tool
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Call MCP Tool
         functionRef:
           refName: callMcpTool
           arguments:
-            name: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .name }'
-            arguments: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .arguments // {} }'
+            name: '${ .tool_args.name }'
+            arguments: '${ .tool_args.arguments // {} }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute A2A Delegation
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Delegate To SubAgent
         functionRef:
           refName: delegateToAgent
           arguments:
-            target_agent: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .target_agent }'
-            prompt: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .prompt }'
+            target_agent: '${ .tool_args.target_agent }'
+            prompt: '${ .tool_args.prompt }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute Memory Get
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Get Memory Value
         functionRef:
           refName: getMemory
           arguments:
-            key: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .key }'
+            key: '${ .tool_args.key }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute Memory Set
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Set Memory Value
         functionRef:
           refName: setMemory
           arguments:
-            key: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .key }'
-            value: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .value }'
+            key: '${ .tool_args.key }'
+            value: '${ .tool_args.value }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute Memory Search
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Search Memory Store
         functionRef:
           refName: searchMemory
           arguments:
-            query: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .query }'
-            top_k: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .top_k // 3 }'
+            query: '${ .tool_args.query }'
+            top_k: '${ .tool_args.top_k // 3 }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute HITL Request
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Request HITL Approval
         functionRef:
           refName: requestApproval
           arguments:
-            action_name: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .action_name }'
-            description: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .description // "Human approval required" }'
+            action_name: '${ .tool_args.action_name }'
+            description: '${ .tool_args.description // "Human approval required" }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
     end: true
 
   - name: Execute Guardrail Validation
     type: operation
     actions:
+      - name: Parse Tool Arguments
+        functionRef:
+          refName: toolArgs
+        actionDataFilter:
+          toStateData: '.tool_args'
       - name: Validate Guardrail Content
         functionRef:
           refName: validateOutput
           arguments:
-            content: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .content }'
-            expected_format: '${ .choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end | .expected_format // "json" }'
+            content: '${ .tool_args.content }'
+            expected_format: '${ .tool_args.expected_format // "json" }'
         actionDataFilter:
           toStateData: '.tool_result'
+    onErrors:
+      - errorRef: ToolHttpError
+        transition: Tool Execution Error
+      - errorRef: ToolServerError
+        transition: Tool Execution Error
+    end: true
+
+  # HTTP errors from a catalog call land here: the sub-flow completes normally with a structured
+  # error tool_result instead of crashing, so the parent loop can append it and continue.
+  - name: Tool Execution Error
+    type: inject
+    data:
+      tool_result:
+        error: Tool execution failed with an HTTP error from the utility catalog
+        status: error
     end: true
 
   - name: Unsupported Tool

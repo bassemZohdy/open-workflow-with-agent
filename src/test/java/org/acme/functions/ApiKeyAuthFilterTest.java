@@ -6,6 +6,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.is;
+
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -50,6 +53,46 @@ class ApiKeyAuthFilterTest {
                 .get("/q/health")
                 .then()
                 .statusCode(200);
+    }
+
+    @Test
+    void rejectsPathTraversalVariant() {
+        // Undertow normalizes traversal before JAX-RS routing; the request is still blocked
+        // (401 when it resolves to a gated route, 404 when it resolves to no route).
+        given()
+                .when()
+                .get("/functions/../functions/time?timezone=UTC")
+                .then()
+                .statusCode(anyOf(is(401), is(404)));
+    }
+
+    @Test
+    void rejectsDoubleSlashVariant() {
+        given()
+                .when()
+                .get("/functions//time?timezone=UTC")
+                .then()
+                .statusCode(anyOf(is(401), is(404)));
+    }
+
+    @Test
+    void rejectsEncodedSlashVariant() {
+        given()
+                .when()
+                .get("/functions/%2Ftime?timezone=UTC")
+                .then()
+                .statusCode(anyOf(is(401), is(404)));
+    }
+
+    @Test
+    void gatesWorkflowEndpointsToo() {
+        given()
+                .contentType("application/json")
+                .body("{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
+                .when()
+                .post("/llm_tool_agent")
+                .then()
+                .statusCode(401);
     }
 
     public static final class WithApiKey implements QuarkusTestProfile {

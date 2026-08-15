@@ -10,7 +10,7 @@ This document describes the automated Playwright End-to-End (E2E) testing framew
 ```text
 e2e/
  ├── package.json                   # Playwright dependencies
- ├── playwright.config.ts           # E2E test runner configuration (video, trace, screenshots)
+ ├── playwright.config.ts           # E2E runner config: webServer, auth header, video/trace/screenshots
  └── tests/
      └── agentic-console-e2e.spec.ts # Automated test spec for all 12 console presets
 ```
@@ -20,31 +20,47 @@ e2e/
 ## Test Configuration (`playwright.config.ts`)
 
 - **Browser**: Chromium (headless / desktop mode)
-- **Base URL**: `http://localhost:9090` (or `http://localhost:8080`)
-- **Artifact Recordings**:
-  - `video: 'on'`: Records MP4/WebM video walkthrough for every feature test execution.
-  - `trace: 'on'`: Generates full Playwright ZIP trace for DOM and network analysis.
-  - `screenshot: 'on'`: Captures viewport screenshots upon test completion.
+- **Base URL**: `http://localhost:8080` (override with `PLAYWRIGHT_BASE_URL`)
+- **Auto-starting the app**: Playwright's `webServer` starts the packaged Quarkus app
+  (`target/quarkus-app/quarkus-run.jar`) before the suite and waits for `/q/health`; set
+  `PLAYWRIGHT_SKIP_WEBSERVER=1` to reuse an already-running instance.
+- **Auth**: the `%prod` profile gates every endpoint behind `UTILITY_API_KEY`; the webServer starts
+  the app with `PLAYWRIGHT_API_KEY` (default `e2e-test-key`) and the suite sends it as a Bearer
+  header on every request. Override with `PLAYWRIGHT_API_KEY` when testing an externally-managed app.
+- **Artifact Recordings**: `video: 'on'`, `trace: 'on'`, `screenshot: 'on'`.
 
 ---
 
 ## Running Playwright E2E Tests
 
-### 1. Install Dependencies
+### 1. Package the application first (the webServer starts the packaged jar)
+```bash
+mvn clean package
+```
+
+### 2. Install Dependencies
 ```bash
 cd e2e
 npm install
 npx playwright install chromium
 ```
 
-### 2. Execute Headless E2E Test Suite & Record Features
+### 3. Execute Headless E2E Test Suite & Record Features
 ```bash
 npm run test:e2e
 ```
 
-### 3. Inspect Test Artifacts & HTML Report
+### 4. Inspect Test Artifacts & HTML Report
 ```bash
 npm run test:e2e:report
 ```
 
 All generated recordings (video, screenshots, traces) are persisted in `e2e/test-results/`.
+
+---
+
+## CI Integration
+
+The GitHub Actions pipeline runs a dedicated Playwright job (`.github/workflows/ci.yml`) that
+packages the app, installs Chromium with `--with-deps`, and runs the suite - so the E2E suite
+(which previously only ran locally) now blocks merges like the Maven suite.
