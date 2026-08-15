@@ -65,4 +65,44 @@ This document outlines the full feature matrix for extending the **OpenWorkflow 
 
 ## 4. Hardening & Bug Backlog
 
-Everything identified in the last review pass is resolved (see Steps 16-23 above). Nothing open at the moment; re-populate this section as new gaps are found.
+Re-populated from the full project review (security audit + code-quality pass) and reconciled with Steps 24-26. Prioritized: fix in top-down order.
+
+### Correctness Bugs (fix first)
+
+- [ ] **Step 27**: Fix the HITL approval state machine — `requestApproval` stores requests pre-approved (`status: "approved"`, `UtilityResource.java:196`) and `approveRequest` never writes back to `hitlRequests`, so a deny decision is a no-op and `GET /hitl/status` always reports the original status; the workflow's deny branch in `sub_flows/hitl-gate.sw.yaml` is unreachable. Store requests as `pending`, make `approve` transition state (404 on unknown `request_id`, default `approved=false`, record approver + timestamp), and fix `UtilityResourceTest.java:206` which currently asserts the buggy behavior (`"approved"` after a deny).
+- [ ] **Step 28**: Replace the `catch (StackOverflowError)` in `UtilityResource.calculate` (`UtilityResource.java:60-61`) with a pre-parse nesting-depth check (reject unmatched/total paren depth > ~50). Catching a `VirtualMachineError` and continuing is explicitly unreliable per the JLS — the JVM makes no guarantee the thread is in a recoverable state.
+- [ ] **Step 29**: Align catalog contracts with implementation: `hitl-catalog.yaml` declares `description` as required but the code defaults it; `fallback-catalog.yaml` advertises `fallback_provider` and `guardrails-catalog.yaml` advertises `expected_format` — neither is consumed by `UtilityResource`. Remove the unused params from the catalogs or implement them.
+- [ ] **Step 30**: Document that Patterns 8-12 (`parallel-agent`, `chain-agent`, `supervisor-agent`, `reflection-agent`) demonstrate orchestration only and never invoke the LLM (they call mock A2A endpoints) — clarify in README/docs so readers don't assume LLM-driven behavior.
+
+### Security & Deployment Defaults
+
+- [ ] **Step 31**: Bind all `docker-compose.yml` services to loopback (`127.0.0.1:8080:8080`, `127.0.0.1:5432:5432`, `127.0.0.1:6379:6379`, `127.0.0.1:11434:11434`, `127.0.0.1:4000:4000`) — as shipped, `docker compose up` exposes unauthenticated Redis/Ollama, default-password Postgres, and LiteLLM to the whole LAN.
+- [ ] **Step 32**: Drop the `:-` fallback defaults for credentials in `docker-compose.yml`/`.env.example` (fail if unset instead of silently using `sk-litellm-local-dev` / `openworkflow_secret`), and add `--requirepass` to Redis.
+- [ ] **Step 33**: Stop authenticating the app to LiteLLM with the master key (`OPENAI_API_KEY == LITELLM_MASTER_KEY` in `.env.example`) — provision a LiteLLM virtual key with model allowlist + budget cap; the app never needs key-management/spend privileges.
+- [ ] **Step 34**: Enable `UTILITY_API_KEY` and `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` by default in the `%prod` Quarkus profile (keep dev opt-out) — the container image currently ships fully open.
+- [ ] **Step 35**: Add server-side guardrails to the workflow entry: model allowlist, `max_tokens` clamp (e.g. ≤ 4096), and `messages` count/length caps in `sub_flows/agent-loop.sw.yaml`/`llm-tool-agent.sw.yaml` — today any caller controls model selection, unbounded token consumption, and can inject `role:"system"` messages.
+- [ ] **Step 36**: Cap memory key/value sizes in `setMemory` (e.g. key ≤ 256 B, value ≤ 4 KB, reject with 413) — `BoundedCache` caps entry *count* (10k) but not bytes; ~10k × 10 MB bodies ≈ 100 GB retainable for 1h → OOM.
+- [ ] **Step 37**: Sanitize CR/LF in logged user/LLM-controlled strings (log injection via `%0a`) and truncate/hash prompt payloads — raw prompts are persisted to `logs/application.log*` at INFO (`UtilityResource.java:68,98,129,274`).
+- [ ] **Step 38**: Pin mutable image tags in `docker-compose.yml`: `ollama/ollama:latest` → specific version, `ghcr.io/berriai/litellm:main-latest` → version tag.
+
+### Robustness & Architecture
+
+- [ ] **Step 39**: Add `onErrors` error handling to `sub_flows/agent-loop.sw.yaml` (at minimum) — no workflow YAML defines error transitions today, so any tool HTTP 400/500 propagates and crashes the parent workflow instead of feeding the error back to the LLM as a tool result.
+- [ ] **Step 40**: Mark tool/memory output as untrusted at the tool→LLM boundary in the reference patterns: delimit and length-cap `tool_result` content appended by `appendToolResult`, and stop echoing raw arguments/prompts into loop-back content (`UtilityResource.java:99-103,130-134`) — demonstrates basic indirect prompt-injection defense (OWASP LLM01/ASI06).
+- [ ] **Step 41**: Split the 376-line `UtilityResource` god-class into domain-scoped resources (`TimeResource`, `CalculatorResource`, `McpResource`, `A2aResource`, `MemoryResource`, `HitlResource`, `GuardrailsResource`, `FallbackResource`, `PlannerResource`) behind the shared `/functions` prefix — enables per-domain validation and test classes.
+- [ ] **Step 42**: Remove or wire the dead catalog operations: `listMcpTools` (`mcp-catalog.yaml`) and `listAgents` (`a2a-catalog.yaml`) are declared but no workflow state calls them.
+- [ ] **Step 43**: Factor the duplicated tool-argument extraction expression in `sub_flows/tool-executor.sw.yaml` (the `fromjson-else identity` pipeline is copy-pasted 10×) into a reusable expression function.
+
+### Test & CI Gaps
+
+- [ ] **Step 44**: Expand `AgentLoopSubflowTest` beyond the single `7 * 6` calculator scenario — the mock already supports `get_current_time` (`OpenAiMockApiResource.java:49`) but no test exercises it. Add the time-tool path, a multi-step tool-call sequence, the iteration-limit guard, and a tool-HTTP-error propagation case. Add subflow tests for `parallel_agent`/`chain_agent`/`supervisor_agent` (currently zero coverage).
+- [ ] **Step 45**: Add regression tests: HITL deny→status flow (after Step 27), calculator nesting-depth rejection, `Infinity`/`NaN` results, `BoundedCache` size-eviction + TTL expiry, memory oversize-value rejection (after Step 36), and an auth-filter path-bypass matrix (traversal/encoded/double-slash variants asserting 401).
+- [ ] **Step 46**: Extend CI (`.github/workflows/ci.yml`): add `timeout-minutes` to jobs, a Playwright e2e job (the suite exists in `e2e/` but only runs locally), and blocking Trivy/OWASP dependency-check + gitleaks steps (Dependabot alerts today but nothing blocks merges on CVEs; concurrency group already added in Step 26).
+- [ ] **Step 47**: Add the Maven wrapper (`mvnw` + `.mvn/`) for reproducible contributor builds.
+
+### Known Accepted Limitations (documented, not scheduled)
+
+- `RateLimitFilter` is global, per-JVM, and best-effort under concurrent bursts (fixed-window CAS) — documented as a backstop; use a Redis-backed counter if clustered.
+- `BoundedCache` TTL eviction is lazy (read-triggered); expired-but-unread entries linger until LRU eviction — acceptable for a mock store.
+- `memory/search` is a stub returning one fabricated match and ignores `top_k` — intentional mock behavior once catalog params are aligned (Step 29).
+- The debug console (`index.html`) is ungated by design when `UTILITY_API_KEY` is set (static resources bypass JAX-RS); uses `textContent` only (no XSS found).
