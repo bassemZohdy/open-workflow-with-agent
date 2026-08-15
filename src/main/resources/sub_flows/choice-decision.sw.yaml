@@ -49,7 +49,7 @@ states:
   - name: Validate Selected Option
     type: switch
     dataConditions:
-      - condition: '${ . as $root | any($root.options[]; . == (($root.llm_response.choices[0].message.content // "") | trim)) }'
+      - condition: '${ . as $root | any($root.options[]; . == ((($root.llm_response.choices // [])[0].message.content // "") | trim)) }'
         transition: Return Selected Option
     defaultCondition:
       transition: Invalid Model Answer

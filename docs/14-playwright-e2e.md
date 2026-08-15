@@ -1,7 +1,7 @@
 # Playwright E2E Testing & Video Recording Suite
 
 ## Overview
-This document describes the automated Playwright End-to-End (E2E) testing framework designed to test, verify, and record all 14 Agentic Patterns and OpenAPI Catalog endpoints.
+This document describes the automated Playwright End-to-End (E2E) testing framework. The suite exercises the debug console and the remaining local tool endpoints: calculator, time, and MCP.
 
 ---
 
@@ -12,7 +12,7 @@ e2e/
  ├── package.json                   # Playwright dependencies
  ├── playwright.config.ts           # E2E runner config: webServer, auth header, video/trace/screenshots
  └── tests/
-     └── agentic-console-e2e.spec.ts # Automated test spec for all 12 console presets
+     └── agentic-console-e2e.spec.ts # Automated test spec for the debug console presets
 ```
 
 ---

@@ -7,11 +7,5 @@ configMapGenerator:
     files:
       - agent-loop.sw.yaml=../src/main/resources/sub_flows/agent-loop.sw.yaml
       - tool-executor.sw.yaml=../src/main/resources/sub_flows/tool-executor.sw.yaml
-      - hitl-gate.sw.yaml=../src/main/resources/sub_flows/hitl-gate.sw.yaml
-      - parallel-agent.sw.yaml=../src/main/resources/sub_flows/parallel-agent.sw.yaml
-      - reflection-agent.sw.yaml=../src/main/resources/sub_flows/reflection-agent.sw.yaml
-      - plan-agent.sw.yaml=../src/main/resources/sub_flows/plan-agent.sw.yaml
-      - chain-agent.sw.yaml=../src/main/resources/sub_flows/chain-agent.sw.yaml
-      - supervisor-agent.sw.yaml=../src/main/resources/sub_flows/supervisor-agent.sw.yaml
       - boolean-decision.sw.yaml=../src/main/resources/sub_flows/boolean-decision.sw.yaml
       - choice-decision.sw.yaml=../src/main/resources/sub_flows/choice-decision.sw.yaml

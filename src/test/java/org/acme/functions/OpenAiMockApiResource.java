@@ -5,8 +5,9 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -29,10 +30,10 @@ import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
  */
 public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManager {
     private HttpServer server;
-    private final AtomicInteger llmCalls = new AtomicInteger();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /** Captures the Authorization header of the most recent request, for auth regression tests. */
-    static volatile String lastAuthorizationHeader;
+    static String lastAuthorizationHeader;
 
     @Override
     public Map<String, String> start() {
@@ -43,14 +44,10 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
             String base = "http://localhost:" + server.getAddress().getPort();
             return Map.of(
                     "quarkus.rest-client.openaiCatalog.url", base + "/v1",
-                    // All reusable catalogs resolve to the application under test (Quarkus tests
+                    // Local tool catalogs resolve to the application under test (Quarkus tests
                     // bind HTTP to port 8081 by default), which serves /functions/* locally.
                     "quarkus.rest-client.utilityCatalog.url", "http://localhost:8081",
-                    "quarkus.rest-client.mcpCatalog.url", "http://localhost:8081",
-                    "quarkus.rest-client.a2aCatalog.url", "http://localhost:8081",
-                    "quarkus.rest-client.memoryCatalog.url", "http://localhost:8081",
-                    "quarkus.rest-client.hitlCatalog.url", "http://localhost:8081",
-                    "quarkus.rest-client.guardrailsCatalog.url", "http://localhost:8081"
+                    "quarkus.rest-client.mcpCatalog.url", "http://localhost:8081"
             );
         } catch (IOException e) {
             throw new IllegalStateException("Cannot start OpenAI mock API server", e);
@@ -59,7 +56,6 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
 
     private void chatCompletions(HttpExchange exchange) throws IOException {
         String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        llmCalls.incrementAndGet();
         lastAuthorizationHeader = exchange.getRequestHeaders().getFirst("Authorization");
 
         int toolMessages = countToolMessages(requestBody);
@@ -94,7 +90,22 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
     }
 
     private static int countToolMessages(String requestBody) {
-        return requestBody.split("\"role\":\"tool\"", -1).length - 1;
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(requestBody);
+            JsonNode messages = root.path("messages");
+            if (!messages.isArray()) {
+                return 0;
+            }
+            int count = 0;
+            for (JsonNode message : messages) {
+                if ("tool".equals(message.path("role").asText())) {
+                    count++;
+                }
+            }
+            return count;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private static String toolCallBody(String id, String toolName, String arguments) {

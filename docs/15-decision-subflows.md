@@ -22,7 +22,7 @@ Successful output:
 }
 ```
 
-The model must return exactly `yes` or `no`, ignoring case and surrounding whitespace. Any other response returns `valid: false`.
+The model must return exactly `yes` or `no`, ignoring case and surrounding whitespace. Any other response returns `valid: false`. (The workflow emits the answer as a JSON string.)
 
 ## Constrained choice
 
@@ -46,7 +46,7 @@ Successful output:
 
 The selected value must exactly match one of the supplied options. Missing questions, empty option lists, and out-of-list model responses return `valid: false`.
 
-Both subflows accept the normal workflow model configuration through the OpenAI-compatible client. They intentionally return a validation result rather than silently coercing an invalid answer; callers can retry, fall back, or route to HITL approval.
+Both subflows hardcode `model: default-model` and use the configured OpenAI-compatible client. They intentionally return a validation result rather than silently coercing an invalid answer; callers can retry, fall back, or route to HITL approval.
 
 ## CI coverage
 

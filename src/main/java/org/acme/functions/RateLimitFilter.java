@@ -31,7 +31,7 @@ public class RateLimitFilter implements ContainerRequestFilter {
     private static final long WINDOW_MILLIS = 60_000;
 
     @ConfigProperty(name = "utility.rate-limit.requests-per-minute", defaultValue = "0")
-    int requestsPerMinute;
+    private int requestsPerMinute;
 
     private final AtomicReference<Window> window = new AtomicReference<>(new Window(currentWindowStart(), 0));
 

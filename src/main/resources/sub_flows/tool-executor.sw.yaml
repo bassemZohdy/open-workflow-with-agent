@@ -2,13 +2,12 @@ id: tool_executor
 version: '1.0'
 specVersion: '0.8'
 name: Tool Executor
-description: Reusable sub-flow for dispatching tool calls to OpenAPI resource catalogs (Utilities, MCP, A2A, Memory, HITL, Guardrails)
+description: Reusable sub-flow for dispatching tool calls to local utility and MCP tools
 start: Route Tool Call
 
-# Any tool-catalog HTTP error (4xx/5xx - SonataFlow surfaces these as WorkItemExecutionException
-# carrying the HTTP status as its error code) is converted into a structured `tool_result.error`
-# instead of crashing the parent workflow, so the agent loop can feed the failure back to the LLM
-# as an ordinary tool result.
+# Any tool-catalog HTTP error is converted into a structured `tool_result.error` instead of
+# crashing the parent workflow, so the agent loop can feed the failure back to the LLM as an
+# ordinary tool result.
 errors:
   - name: ToolHttpError
     code: "400"
@@ -20,10 +19,6 @@ extensions:
     definitions:
       utilityCatalog: classpath:/catalogs/utility-functions.yaml
       mcpCatalog: classpath:/catalogs/mcp-catalog.yaml
-      a2aCatalog: classpath:/catalogs/a2a-catalog.yaml
-      memoryCatalog: classpath:/catalogs/memory-catalog.yaml
-      hitlCatalog: classpath:/catalogs/hitl-catalog.yaml
-      guardrailsCatalog: classpath:/catalogs/guardrails-catalog.yaml
 
 functions:
   - name: getCurrentTime
@@ -32,21 +27,9 @@ functions:
     operation: utilityCatalog#calculate
   - name: callMcpTool
     operation: mcpCatalog#callMcpTool
-  - name: delegateToAgent
-    operation: a2aCatalog#delegateToAgent
-  - name: getMemory
-    operation: memoryCatalog#getMemory
-  - name: setMemory
-    operation: memoryCatalog#setMemory
-  - name: searchMemory
-    operation: memoryCatalog#searchMemory
-  - name: requestApproval
-    operation: hitlCatalog#requestApproval
-  - name: validateOutput
-    operation: guardrailsCatalog#validateOutput
   # Single reusable parser for the tool-call arguments object. Every execute state below runs
   # this first (storing the result in `.tool_args`) and then references `.tool_args.<field>`,
-  # instead of copy-pasting the fromjson-else-identity pipeline ten times.
+  # instead of copy-pasting the fromjson-else-identity pipeline.
   - name: toolArgs
     type: expression
     operation: '(.choices[0].message.tool_calls[0].function.arguments | if type == "string" then fromjson else . end)'
@@ -61,18 +44,6 @@ states:
         transition: Execute Calculator Tool
       - condition: '${ .choices[0].message.tool_calls[0].function.name == "mcp_tool_call" }'
         transition: Execute MCP Tool
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "a2a_delegate" }'
-        transition: Execute A2A Delegation
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "memory_get" }'
-        transition: Execute Memory Get
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "memory_set" }'
-        transition: Execute Memory Set
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "memory_search" }'
-        transition: Execute Memory Search
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "hitl_request" }'
-        transition: Execute HITL Request
-      - condition: '${ .choices[0].message.tool_calls[0].function.name == "guardrail_validate" }'
-        transition: Execute Guardrail Validation
     defaultCondition:
       transition: Unsupported Tool
 
@@ -143,150 +114,13 @@ states:
         transition: Tool Execution Error
     end: true
 
-  - name: Execute A2A Delegation
-    type: operation
-    actions:
-      - name: Parse Tool Arguments
-        functionRef:
-          refName: toolArgs
-        actionDataFilter:
-          toStateData: '.tool_args'
-      - name: Delegate To SubAgent
-        functionRef:
-          refName: delegateToAgent
-          arguments:
-            target_agent: '${ .tool_args.target_agent }'
-            prompt: '${ .tool_args.prompt }'
-        actionDataFilter:
-          toStateData: '.tool_result'
-    onErrors:
-      - errorRef: ToolHttpError
-        transition: Tool Execution Error
-      - errorRef: ToolServerError
-        transition: Tool Execution Error
-    end: true
-
-  - name: Execute Memory Get
-    type: operation
-    actions:
-      - name: Parse Tool Arguments
-        functionRef:
-          refName: toolArgs
-        actionDataFilter:
-          toStateData: '.tool_args'
-      - name: Get Memory Value
-        functionRef:
-          refName: getMemory
-          arguments:
-            key: '${ .tool_args.key }'
-        actionDataFilter:
-          toStateData: '.tool_result'
-    onErrors:
-      - errorRef: ToolHttpError
-        transition: Tool Execution Error
-      - errorRef: ToolServerError
-        transition: Tool Execution Error
-    end: true
-
-  - name: Execute Memory Set
-    type: operation
-    actions:
-      - name: Parse Tool Arguments
-        functionRef:
-          refName: toolArgs
-        actionDataFilter:
-          toStateData: '.tool_args'
-      - name: Set Memory Value
-        functionRef:
-          refName: setMemory
-          arguments:
-            key: '${ .tool_args.key }'
-            value: '${ .tool_args.value }'
-        actionDataFilter:
-          toStateData: '.tool_result'
-    onErrors:
-      - errorRef: ToolHttpError
-        transition: Tool Execution Error
-      - errorRef: ToolServerError
-        transition: Tool Execution Error
-    end: true
-
-  - name: Execute Memory Search
-    type: operation
-    actions:
-      - name: Parse Tool Arguments
-        functionRef:
-          refName: toolArgs
-        actionDataFilter:
-          toStateData: '.tool_args'
-      - name: Search Memory Store
-        functionRef:
-          refName: searchMemory
-          arguments:
-            query: '${ .tool_args.query }'
-            top_k: '${ .tool_args.top_k // 3 }'
-        actionDataFilter:
-          toStateData: '.tool_result'
-    onErrors:
-      - errorRef: ToolHttpError
-        transition: Tool Execution Error
-      - errorRef: ToolServerError
-        transition: Tool Execution Error
-    end: true
-
-  - name: Execute HITL Request
-    type: operation
-    actions:
-      - name: Parse Tool Arguments
-        functionRef:
-          refName: toolArgs
-        actionDataFilter:
-          toStateData: '.tool_args'
-      - name: Request HITL Approval
-        functionRef:
-          refName: requestApproval
-          arguments:
-            action_name: '${ .tool_args.action_name }'
-            description: '${ .tool_args.description // "Human approval required" }'
-        actionDataFilter:
-          toStateData: '.tool_result'
-    onErrors:
-      - errorRef: ToolHttpError
-        transition: Tool Execution Error
-      - errorRef: ToolServerError
-        transition: Tool Execution Error
-    end: true
-
-  - name: Execute Guardrail Validation
-    type: operation
-    actions:
-      - name: Parse Tool Arguments
-        functionRef:
-          refName: toolArgs
-        actionDataFilter:
-          toStateData: '.tool_args'
-      - name: Validate Guardrail Content
-        functionRef:
-          refName: validateOutput
-          arguments:
-            content: '${ .tool_args.content }'
-            expected_format: '${ .tool_args.expected_format // "json" }'
-        actionDataFilter:
-          toStateData: '.tool_result'
-    onErrors:
-      - errorRef: ToolHttpError
-        transition: Tool Execution Error
-      - errorRef: ToolServerError
-        transition: Tool Execution Error
-    end: true
-
   # HTTP errors from a catalog call land here: the sub-flow completes normally with a structured
   # error tool_result instead of crashing, so the parent loop can append it and continue.
   - name: Tool Execution Error
     type: inject
     data:
       tool_result:
-        error: Tool execution failed with an HTTP error from the utility catalog
+        error: Tool execution failed with an HTTP error
         status: error
     end: true
 

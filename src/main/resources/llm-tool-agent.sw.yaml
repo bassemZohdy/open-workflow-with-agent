@@ -12,7 +12,7 @@ start: Validate Request
 #              prompts through the public entry point
 #   * model:   must be in the allowlist below (edit this list to expose other models/aliases)
 # Deeper clamps (max_tokens <= 4096, message truncation) are applied defensively inside the
-# agent_loop subflow itself, since that subflow is also reachable from plan_agent.
+# agent_loop subflow itself.
 
 states:
   - name: Validate Request

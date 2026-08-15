@@ -9,8 +9,8 @@ This deployment runs the **Agentic OpenWorkflow Specification Reference Implemen
 The OpenWorkflow spec components are mapped to Kubernetes resources as follows:
 
 * **Parent Workflow Entry Point** ([`llm-tool-agent.sw.yaml`](../src/main/resources/llm-tool-agent.sw.yaml)): Defined in [`sonataflow.yaml`](sonataflow.yaml) as the primary SonataFlow Custom Resource (CR).
-* **Agentic Sub-Flows** ([`agent-loop.sw.yaml`](../src/main/resources/sub_flows/agent-loop.sw.yaml) & [`tool-executor.sw.yaml`](../src/main/resources/sub_flows/tool-executor.sw.yaml)): Packaged dynamically into the `llm-tool-agent-resources` ConfigMap using [`kustomization.yaml`](kustomization.yaml).
-* **Catalog Functions**: OpenAPI catalogs ([`openai-compatible.yaml`](../src/main/resources/catalogs/openai-compatible.yaml) and [`utility-functions.yaml`](../src/main/resources/catalogs/utility-functions.yaml)) are bundled inside the runtime image under `src/main/resources/catalogs` so the workflow engine resolves catalog definitions natively.
+* **Agentic Sub-Flows** ([`llm-tool-agent.sw.yaml`](../src/main/resources/llm-tool-agent.sw.yaml), [`agent-loop.sw.yaml`](../src/main/resources/sub_flows/agent-loop.sw.yaml), [`tool-executor.sw.yaml`](../src/main/resources/sub_flows/tool-executor.sw.yaml), [`boolean-decision.sw.yaml`](../src/main/resources/sub_flows/boolean-decision.sw.yaml), and [`choice-decision.sw.yaml`](../src/main/resources/sub_flows/choice-decision.sw.yaml)): Packaged dynamically into the `llm-tool-agent-resources` ConfigMap using [`kustomization.yaml`](kustomization.yaml).
+* **Catalog Functions**: OpenAPI catalogs ([`openai-compatible.yaml`](../src/main/resources/catalogs/openai-compatible.yaml), [`utility-functions.yaml`](../src/main/resources/catalogs/utility-functions.yaml), and [`mcp-catalog.yaml`](../src/main/resources/catalogs/mcp-catalog.yaml)) are bundled inside the runtime image under `src/main/resources/catalogs` so the workflow engine resolves catalog definitions natively.
 
 ---
 

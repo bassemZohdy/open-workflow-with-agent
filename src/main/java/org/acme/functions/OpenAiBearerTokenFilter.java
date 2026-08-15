@@ -24,10 +24,17 @@ import org.eclipse.microprofile.config.ConfigProvider;
  * that doesn't depend on that path-matching at all.
  */
 public class OpenAiBearerTokenFilter implements ClientRequestFilter {
+
+    private static final String BEARER_TOKEN = ConfigProvider.getConfig()
+            .getOptionalValue("openai.api-key", String.class)
+            .filter(key -> !key.isBlank())
+            .map(key -> "Bearer " + key)
+            .orElse(null);
+
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
-        ConfigProvider.getConfig().getOptionalValue("openai.api-key", String.class)
-            .filter(key -> !key.isBlank())
-            .ifPresent(key -> requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, "Bearer " + key));
+        if (BEARER_TOKEN != null) {
+            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, BEARER_TOKEN);
+        }
     }
 }

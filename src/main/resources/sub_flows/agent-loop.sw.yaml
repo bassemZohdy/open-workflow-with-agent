@@ -2,14 +2,15 @@ id: agent_loop
 version: '1.0'
 specVersion: '0.8'
 name: Agent Loop
-description: Reusable YAML agent loop using OpenAPI resource catalogs and sub-flow tool execution
+description: Reusable YAML agent loop using an OpenAI-compatible provider and local utility/MCP tools
 start: Inject Agent Defaults
 
 # Workflow-level error handling. SonataFlow surfaces catalog HTTP errors as
-# WorkItemExecutionException carrying the HTTP status as its error code, so the codes below
-# match 4xx/5xx responses from the tool catalogs and the LLM provider. tool_executor converts
-# tool HTTP errors into structured tool_result errors itself; the handlers here are defense in
-# depth for anything that escapes the sub-flow (and for LLM-provider failures).
+# WorkItemExecutionException carrying the HTTP status as its error code. The codes below match
+# the HTTP statuses the local tool catalogs actually return (400 from the calculator, 500 from
+# unexpected server failures). tool_executor converts tool HTTP errors into structured
+# tool_result errors itself; the handlers here are defense in depth for anything that escapes
+# the sub-flow (and for LLM-provider failures).
 errors:
   - name: ToolHttpError
     code: "400"
@@ -31,22 +32,24 @@ functions:
   - name: appendToolResult
     type: expression
     operation: >-
+      (.choices[0].message.tool_calls // [])[0] as $first_call |
       {messages: ((.messages | tojson | fromjson) + [{
         role: .choices[0].message.role,
         content: (.choices[0].message.content // null),
-        tool_calls: (.choices[0].message.tool_calls | map(.function.arguments |= (if type == "string" then . else tojson end)))
+        tool_calls: (.choices[0].message.tool_calls // [])
       },
         {role: "tool",
-         tool_call_id: (.choices[0].message.tool_calls[0].id // "unknown"),
-         name: (.choices[0].message.tool_calls[0].function.name // "unknown"),
+         tool_call_id: ($first_call.id // "unknown"),
+         name: ($first_call.function.name // "unknown"),
          content: ("<untrusted_tool_output>\n" + ((.tool_result | tojson) | .[0:2000]) + "\n</untrusted_tool_output>")}
       ]), tool_iterations: (.tool_iterations + 1)}
   # Produces a structured error tool_result when the tool sub-flow fails at the workflow level.
   - name: toolError
     type: expression
     operation: >-
-      {error: "tool execution failed with an HTTP error from the utility catalog",
-       tool_call_id: (.choices[0].message.tool_calls[0].id // "unknown")}
+      ((.choices[0].message.tool_calls // [])[0].id // "unknown") as $tool_call_id |
+      {error: "tool execution failed with an HTTP error",
+       tool_call_id: $tool_call_id}
 
 states:
   - name: Inject Agent Defaults
@@ -91,20 +94,6 @@ states:
                   type: object
                   description: Arguments object for the target MCP tool.
               required: [name]
-        - type: function
-          function:
-            name: a2a_delegate
-            description: Delegate a sub-task prompt to a peer sub-agent.
-            parameters:
-              type: object
-              properties:
-                target_agent:
-                  type: string
-                  description: Target sub-agent ID (e.g., researcher_agent, coder_agent).
-                prompt:
-                  type: string
-                  description: Detailed task instruction prompt for the target sub-agent.
-              required: [target_agent, prompt]
 
     transition: Call LLM
 
@@ -123,7 +112,7 @@ states:
             # Server-side clamps applied in the workflow itself: cap max_tokens at 4096 and keep
             # the message history bounded to the most recent 20 messages.
             messages: (.messages | if (length > 20) then .[-20:] else . end)
-            temperature: .temperature
+            temperature: (.temperature // 0.7)
             max_tokens: ((.max_tokens // 512) | if . > 4096 then 4096 else . end)
             tools: .tools
     onErrors:

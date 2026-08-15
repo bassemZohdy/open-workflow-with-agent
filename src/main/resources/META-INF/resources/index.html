@@ -34,7 +34,7 @@
   <header>
     <div>
       <h1>Agentic OpenWorkflow Console</h1>
-      <div class="subtitle">Reference Implementation Debug Console for All 14 Canonical Agentic Patterns & Catalogs</div>
+      <div class="subtitle">Reference Implementation Debug Console for the Agent Loop and MCP Tool Catalog</div>
     </div>
     <div id="health" class="status">Checking runtime health…</div>
   </header>
@@ -47,16 +47,6 @@
       <select id="featurePreset" onchange="applyPreset()">
         <option value="agent_loop">1. Agent Loop (Autonomous Reasoning & Tool Execution)</option>
         <option value="mcp">2. Model Context Protocol (MCP Tool Discovery & Execution)</option>
-        <option value="a2a">3. Agent-to-Agent (A2A Sub-Agent Delegation)</option>
-        <option value="memory">4. Short & Long-Term Memory (KV & Vector Search)</option>
-        <option value="hitl">5. Human-in-the-Loop (HITL Approval Gate)</option>
-        <option value="guardrails">6. Output Guardrails (JSON Schema & Content Moderation)</option>
-        <option value="parallel">7. Parallel Multi-Agent Fan-Out (Concurrent Execution)</option>
-        <option value="reflection">8. Self-Reflection & Critique Loop (Generation -> Critique)</option>
-        <option value="planner">9. Planning & Task Decomposition (Goal -> Sub-tasks)</option>
-        <option value="chain">10. Sequential Pipeline Chaining (Research -> Code -> Review)</option>
-        <option value="supervisor">11. Supervisor Router (Dynamic Worker Delegation)</option>
-        <option value="fallback">12. Multi-Provider Fallback (Failover Routing)</option>
       </select>
 
       <label for="endpoint">Endpoint Path</label>
@@ -81,16 +71,6 @@
         <span class="feature-tag">Autonomous Loop</span>
         <span class="feature-tag">Dynamic Tool Router</span>
         <span class="feature-tag">MCP Protocol</span>
-        <span class="feature-tag">A2A Delegation</span>
-        <span class="feature-tag">KV & Vector Memory</span>
-        <span class="feature-tag">HITL Gating</span>
-        <span class="feature-tag">Output Guardrails</span>
-        <span class="feature-tag">Parallel Fan-Out</span>
-        <span class="feature-tag">Self-Reflection</span>
-        <span class="feature-tag">Task Planner</span>
-        <span class="feature-tag">Sequential Pipeline</span>
-        <span class="feature-tag">Supervisor Router</span>
-        <span class="feature-tag">Provider Fallback</span>
       </div>
 
       <label>OpenAPI Catalog Endpoints</label>
@@ -132,71 +112,6 @@
       payload: {
         name: 'web_search',
         arguments: { query: 'OpenWorkflow agentic extensions' }
-      }
-    },
-    a2a: {
-      endpoint: 'functions/a2a/delegate',
-      payload: {
-        target_agent: 'researcher_agent',
-        prompt: 'Analyze repository architecture and catalog definitions'
-      }
-    },
-    memory: {
-      endpoint: 'functions/memory/set',
-      payload: {
-        key: 'agent_execution_mode',
-        value: 'autonomous_production'
-      }
-    },
-    hitl: {
-      endpoint: 'functions/hitl/request',
-      payload: {
-        action_name: 'deploy_production_workflow',
-        description: 'Approval required to deploy SonataFlow workflow to cluster'
-      }
-    },
-    guardrails: {
-      endpoint: 'functions/guardrails/validate',
-      payload: {
-        content: '{"status": "success", "agent_output": "Workflow completed successfully"}',
-        expected_format: 'json'
-      }
-    },
-    parallel: {
-      endpoint: 'functions/a2a/agents',
-      payload: {}
-    },
-    reflection: {
-      endpoint: 'functions/guardrails/validate',
-      payload: {
-        content: 'Candidate agent answer for reflection critique'
-      }
-    },
-    planner: {
-      endpoint: 'functions/planner/decompose',
-      payload: {
-        goal: 'Build and verify production OpenWorkflow agentic microservice'
-      }
-    },
-    chain: {
-      endpoint: 'functions/a2a/delegate',
-      payload: {
-        target_agent: 'coder_agent',
-        prompt: 'Generate workflow state definition'
-      }
-    },
-    supervisor: {
-      endpoint: 'functions/a2a/delegate',
-      payload: {
-        target_agent: 'reviewer_agent',
-        prompt: 'Perform code review and compliance check'
-      }
-    },
-    fallback: {
-      endpoint: 'functions/fallback/chatCompletions',
-      payload: {
-        primary_provider: 'openai',
-        messages: [{ role: 'user', content: 'Execute failover chat completion' }]
       }
     }
   };

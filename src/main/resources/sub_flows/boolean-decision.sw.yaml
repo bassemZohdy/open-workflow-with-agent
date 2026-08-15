@@ -55,12 +55,20 @@ states:
     defaultCondition:
       transition: Invalid Model Answer
 
+  - name: Invalid Model Answer
+    type: inject
+    data:
+      valid: false
+      error: AI response was not exactly yes or no
+      raw_answer: '${ ((.llm_response.choices // [])[0].message.content // "") }'
+    end: true
+
   - name: Return Yes
     type: inject
     data:
       valid: true
       decision: true
-      answer: yes
+      answer: 'yes'
     end: true
 
   - name: Return No
@@ -68,7 +76,7 @@ states:
     data:
       valid: true
       decision: false
-      answer: no
+      answer: 'no'
     end: true
 
   - name: Invalid Input
@@ -76,12 +84,4 @@ states:
     data:
       valid: false
       error: question is required
-    end: true
-
-  - name: Invalid Model Answer
-    type: inject
-    data:
-      valid: false
-      error: AI response was not exactly yes or no
-      raw_answer: '${ .llm_response.choices[0].message.content // "" }'
     end: true
