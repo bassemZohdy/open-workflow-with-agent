@@ -10,12 +10,20 @@
   <description>Production-ready reference implementation for extending the OpenWorkflow specification with native Agentic AI capabilities</description>
 
   <properties>
-    <quarkus-plugin.version>3.27.2</quarkus-plugin.version>
+    <quarkus-plugin.version>3.27.5.1</quarkus-plugin.version>
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.27.2</quarkus.platform.version>
+    <quarkus.platform.version>3.27.5.1</quarkus.platform.version>
     <kogito.bom.version>10.2.0</kogito.bom.version>
     <sonataflow.version>10.2.0</sonataflow.version>
+    <!-- Security floors: Kogito 10.2 pins us to the Quarkus 3.27 line, whose managed
+         Netty (4.1.130) and Jackson (2.19.2) are below the fixed versions for several
+         HIGH CVEs. The BOM imports below are declared BEFORE quarkus-bom so they win
+         Maven's first-import-wins conflict resolution and lift the whole artifact
+         families to the exact advisory floors (netty >= 4.1.136: CVE-2026-56819 and
+         others; jackson >= 2.21.4: CVE-2026-54512/54513, GHSA-r7wm-3cxj-wff9). -->
+    <netty.bom.version>4.1.136.Final</netty.bom.version>
+    <jackson.bom.version>2.21.4</jackson.bom.version>
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>3.0.0-M7</version.surefire.plugin>
@@ -24,6 +32,22 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Declared first: these security-floor BOMs must override the versions managed
+           by quarkus-bom below (first import wins for the artifacts they both manage). -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>${quarkus.platform.group-id}</groupId>
         <artifactId>${quarkus.platform.artifact-id}</artifactId>
