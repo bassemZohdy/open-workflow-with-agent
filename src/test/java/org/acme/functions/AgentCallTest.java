@@ -106,8 +106,8 @@ class AgentCallTest {
         assertNotNull(id, "workflow instance id must be returned by the start call");
 
         // Deterministic hand-off: wait until the workflow runtime accepts (2xx) the
-        // agent_response CloudEvent posted by the mock agent.
-        int dispatchStatus = AgentResource.LAST_DISPATCH_STATUS.get(15, TimeUnit.SECONDS);
+        // agent_response CloudEvent posted by the mock agent for THIS instance.
+        int dispatchStatus = AgentResource.dispatchStatusFor(id).get(15, TimeUnit.SECONDS);
         assertTrue(dispatchStatus >= 200 && dispatchStatus < 300,
                 "callback channel must accept the agent_response event, got HTTP " + dispatchStatus);
 

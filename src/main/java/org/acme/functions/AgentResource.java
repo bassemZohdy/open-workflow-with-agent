@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import jakarta.annotation.PostConstruct;
@@ -48,12 +49,23 @@ public class AgentResource {
     private static final int CALLBACK_RETRY_DELAY_MILLIS = 500;
 
     /**
-     * Test/diagnostics hook: completes with the HTTP status of the most recent callback
-     * dispatch once the workflow runtime definitively accepts (2xx) or rejects it. Only one
-     * async dispatch occurs per test run, so a single future is sufficient. Lets integration
-     * tests await the fire-then-callback hand-off deterministically instead of polling blindly.
+     * Test/diagnostics hook: per-workflow-instance futures that complete with the HTTP
+     * status of that instance's callback dispatch once the workflow runtime definitively
+     * accepts (2xx) or rejects it (-1 on transport failure). Keyed by workflow instance id
+     * so concurrent async dispatches are tracked independently; entries are retained after
+     * completion so late lookups still resolve (bounded by the number of async calls this
+     * mock serves per uptime - not a production concern).
      */
-    static final CompletableFuture<Integer> LAST_DISPATCH_STATUS = new CompletableFuture<>();
+    static final Map<String, CompletableFuture<Integer>> DISPATCH_STATUSES = new ConcurrentHashMap<>();
+
+    /**
+     * Test/diagnostics accessor: the dispatch-status future for a given workflow instance.
+     * Unknown ids (no dispatch attempted, e.g. the fire failed with an HTTP error) resolve
+     * immediately to -1.
+     */
+    static CompletableFuture<Integer> dispatchStatusFor(String workflowInstanceId) {
+        return DISPATCH_STATUSES.getOrDefault(workflowInstanceId, CompletableFuture.completedFuture(-1));
+    }
 
     private HttpClient httpClient;
 
@@ -124,8 +136,9 @@ public class AgentResource {
     }
 
     /**
-     * Posts the {@code agent_response} CloudEvent to the callback URL. Visible for tests,
-     * which may await the returned future and assert on the delivered event.
+     * Posts the {@code agent_response} CloudEvent to the callback URL and returns a future
+     * completing with the final dispatch status (2xx accepted, other HTTP code rejected,
+     * -1 transport failure). Visible for tests, which may await it and assert on delivery.
      *
      * <p>The dispatch is deliberately delayed and retried: the caller (the workflow's
      * callback state) only finishes suspending its instance after this endpoint returns its
@@ -133,7 +146,7 @@ public class AgentResource {
      * agents take far longer than this delay to produce a response; the retry also covers
      * restarts of the receiving endpoint.
      */
-    CompletableFuture<Void> dispatchCallback(String callbackUrl, String workflowInstanceId, Map<String, Object> payload) {
+    CompletableFuture<Integer> dispatchCallback(String callbackUrl, String workflowInstanceId, Map<String, Object> payload) {
         Map<String, Object> event = Map.ofEntries(
                 Map.entry("specversion", "1.0"),
                 Map.entry("id", UUID.randomUUID().toString()),
@@ -151,15 +164,18 @@ public class AgentResource {
                         "output", "Acknowledged: " + summarize(payload))));
         LOG.infof("mock agent dispatching agent_response event to callback url=%s procref=%s",
                 LogSanitizer.safe(callbackUrl), LogSanitizer.safe(workflowInstanceId));
+        CompletableFuture<Integer> status = DISPATCH_STATUSES
+                .computeIfAbsent(workflowInstanceId, ignored -> new CompletableFuture<>());
         // Initial delay so the caller's callback state can finish suspending its instance
         // before the event lands (see method javadoc).
         return CompletableFuture.runAsync(() -> { },
                         CompletableFuture.delayedExecutor(CALLBACK_RETRY_DELAY_MILLIS, TimeUnit.MILLISECONDS))
-                .thenCompose(ignored -> dispatchWithRetry(callbackUrl, event, CALLBACK_ATTEMPTS));
+                .thenCompose(ignored -> dispatchWithRetry(callbackUrl, event, CALLBACK_ATTEMPTS))
+                .whenComplete((code, error) -> status.complete(error != null ? -1 : code));
     }
 
-    private CompletableFuture<Void> dispatchWithRetry(String callbackUrl, Map<String, Object> event, int attemptsLeft) {
-        HttpRequest request;
+    /** Final dispatch outcome per workflow instance id; -1 signals a transport failure. */
+    private CompletableFuture<Integer> dispatchWithRetry(String callbackUrl, Map<String, Object> event, int attemptsLeft) {        HttpRequest request;
         try {
             request = HttpRequest.newBuilder(URI.create(callbackUrl))
                     .header("Content-Type", "application/cloudevents+json")
@@ -171,28 +187,25 @@ public class AgentResource {
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenCompose(response -> {
                     if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                        LAST_DISPATCH_STATUS.complete(response.statusCode());
-                        return CompletableFuture.completedFuture(null);
+                        return CompletableFuture.completedFuture(response.statusCode());
                     }
                     if (attemptsLeft <= 1) {
                         LOG.warnf("agent_response event not accepted after retries (HTTP %d): %s",
                                 response.statusCode(), response.body());
-                        LAST_DISPATCH_STATUS.complete(response.statusCode());
-                        return CompletableFuture.completedFuture(null);
+                        return CompletableFuture.completedFuture(response.statusCode());
                     }
                     return scheduleRetry(callbackUrl, event, attemptsLeft - 1);
                 })
                 .exceptionallyCompose(error -> {
                     if (attemptsLeft <= 1) {
                         LOG.warnf("agent_response event dispatch failed after retries: %s", error.getMessage());
-                        LAST_DISPATCH_STATUS.complete(-1);
-                        return CompletableFuture.completedFuture(null);
+                        return CompletableFuture.completedFuture(-1);
                     }
                     return scheduleRetry(callbackUrl, event, attemptsLeft - 1);
                 });
     }
 
-    private CompletableFuture<Void> scheduleRetry(String callbackUrl, Map<String, Object> event, int attemptsLeft) {
+    private CompletableFuture<Integer> scheduleRetry(String callbackUrl, Map<String, Object> event, int attemptsLeft) {
         LOG.infof("agent_response event rejected; retrying in %d ms (%d attempts left)",
                 CALLBACK_RETRY_DELAY_MILLIS, attemptsLeft);
         return CompletableFuture.runAsync(() -> { },

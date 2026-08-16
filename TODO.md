@@ -38,3 +38,16 @@ out of scope; workflows only call an LLM (catalog function) and an external agen
 - `mvn package -DskipTests` — success
 - `kubectl kustomize deploy --load-restrictor LoadRestrictionsNone` — valid
 - `e2e: npx playwright test` — 6/6 passed
+
+## Post-merge follow-ups
+
+- [x] Merge to `main`, validate full gate, push to GitHub
+- [x] Fix pre-existing CI breakage: security job pinned non-existent action versions
+      (`trivy-action@0.36.0` missing the `v` prefix -> `v0.36.0`; `gitleaks-action@v2.1.7`
+      never existed -> `v2.3.9`)
+- [x] Robustness: mock-agent dispatch status is now a per-instance map
+      (`AgentResource.DISPATCH_STATUSES` + `dispatchStatusFor(id)`), enabling parallel
+      async tests instead of a single shared future
+- [ ] OpenShift/Knative callback smoke test — requires a real cluster (no local cluster
+      available); the `agent_response` CloudEvent contract is covered by the Maven/e2e
+      suites on the quarkus-http channel
