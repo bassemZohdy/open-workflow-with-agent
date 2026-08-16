@@ -23,7 +23,9 @@ class RateLimitFilterTest {
         List<Integer> statusCodes = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             statusCodes.add(
-                given().when().get("/functions/time?timezone=UTC").then().extract().statusCode()
+                given().contentType("application/json")
+                    .body("{\"payload\":{\"task\":\"hi\"}}")
+                    .when().post("/agent/sync").then().extract().statusCode()
             );
         }
 

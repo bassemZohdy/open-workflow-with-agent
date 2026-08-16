@@ -3,7 +3,7 @@ kind: SonataFlow
 metadata:
   name: llm-tool-agent
   annotations:
-    sonataflow.org/description: LLM Tool Agent delegating orchestration to an agent-loop subflow
+    sonataflow.org/description: Orchestrator-only OpenWorkflow - LLM catalog calls and generic REST agent calls (sync/async callback)
     sonataflow.org/version: 1.0.0
     sonataflow.org/profile: gitops
 spec:
@@ -13,45 +13,116 @@ spec:
           name: llm-tool-agent-resources
         workflowPath: .
   flow:
-    id: llm_tool_agent
+    id: agent_call
     version: '1.0'
     specVersion: '0.8'
-    name: LLM Tool Agent
-    description: Public workflow entry point delegating to the reusable agent loop subflow
+    name: Agent Call
+    description: >-
+      Invoke an external agent over its generic REST API. Synchronous mode waits for the
+      HTTP response; asynchronous mode fires the request without waiting and resumes when
+      the agent's response CloudEvent (type agent_response) arrives - SonataFlow's native
+      callback-state async mechanism.
     start: Validate Request
+    events:
+      - name: agentResponseEvent
+        source: ""
+        type: agent_response
+    extensions:
+      - extensionid: workflow-uri-definitions
+        definitions:
+          agentCatalog: classpath:/catalogs/agent-rest.yaml
+    errors:
+      - name: AgentHttpError
+        code: "400"
+      - name: AgentServerError
+        code: "500"
+    functions:
+      - name: agentSyncCall
+        operation: agentCatalog#agentSyncCall
+      - name: agentAsyncCall
+        operation: agentCatalog#agentAsyncCall
     states:
-      # Mirrors src/main/resources/llm-tool-agent.sw.yaml: server-side request guardrails live in
-      # the workflow itself so they deploy with the workflow on OpenShift Serverless Logic.
+      # Mirrors src/main/resources/agent-call.sw.yaml: pure YAML + REST catalogs, no Java
+      # custom functions, so the workflow is portable to any YAML/JSON-only platform.
       - name: Validate Request
         type: switch
         dataConditions:
           - condition: >-
-              ${ ((.messages // []) | type == "array") and ((.messages | length) >= 1) and ((.messages | length) <= 20)
-                 and all(.messages[]; ((.content // "") | type == "string") and ((.content // "" | length) <= 8192))
-                 and all(.messages[]; (.role == "user") or (.role == "assistant"))
-                 and ((.model // "default-model") as $m
-                      | ["default-model", "llama3.1", "llama3.2", "llama3.3", "gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "claude-3-5-haiku"]
-                        | any(. == $m)) }
-            transition: Run Agent Loop
+              ${ ((.mode // "sync") == "sync") or ((.mode // "sync") == "async") }
+            transition: Validate Payload
         defaultCondition:
           transition: Invalid Request
 
-      - name: Run Agent Loop
+      - name: Validate Payload
+        type: switch
+        dataConditions:
+          - condition: >-
+              ${ ((.agent_request // {}) | type == "object")
+                 and (((.callback_url // "") | type == "string")) }
+            transition: Route Mode
+        defaultCondition:
+          transition: Invalid Request
+
+      - name: Route Mode
+        type: switch
+        dataConditions:
+          - condition: '${ (.mode // "sync") == "async" }'
+            transition: Call Agent Async
+        defaultCondition:
+          transition: Call Agent Sync
+
+      - name: Call Agent Sync
         type: operation
         actions:
-          - name: Execute Agent Loop
-            subFlowRef: agent_loop
+          - name: Invoke Agent Synchronously
+            functionRef:
+              refName: agentSyncCall
+              arguments:
+                payload: (.agent_request // {})
             actionDataFilter:
-              useResults: true
+              toStateData: '.agent_response'
+        onErrors:
+          - errorRef: AgentHttpError
+            transition: Agent Call Failed
+          - errorRef: AgentServerError
+            transition: Agent Call Failed
+        end: true
+
+      - name: Call Agent Async
+        type: callback
+        action:
+          name: Fire Asynchronous Agent Request
+          functionRef:
+            refName: agentAsyncCall
+            arguments:
+              callback_url: '(.callback_url // "http://localhost:8080/agent/response-event")'
+              workflow_instance_id: '$WORKFLOW.instanceId'
+              payload: '(.agent_request // {})'
+          actionDataFilter:
+            useResults: false
+        eventRef: agentResponseEvent
+        eventDataFilter:
+          toStateData: '.agent_response'
+        onErrors:
+          - errorRef: AgentHttpError
+            transition: Agent Call Failed
+          - errorRef: AgentServerError
+            transition: Agent Call Failed
         end: true
 
       - name: Invalid Request
         type: inject
         data:
           error: >-
-            request failed server-side validation: messages must be an array of 1-20 entries with
-            string content of at most 8192 chars, roles limited to user|assistant, and model must be
-            in the workflow allowlist
+            request failed server-side validation: mode must be "sync" or "async" (default
+            sync), agent_request must be a JSON object when present, and callback_url must be
+            a string when present
+        end: true
+
+      - name: Agent Call Failed
+        type: inject
+        data:
+          error: agent call failed with an HTTP error from the agent
         end: true
   podTemplate:
     container:
@@ -67,10 +138,13 @@ spec:
             secretKeyRef:
               name: openai-credentials
               key: OPENAI_API_KEY
-        # The %prod profile requires this key - provide it via the same secret (see
-        # openai-credentials.example.yaml). On OpenShift, provision the LLM key as a scoped
-        # LiteLLM virtual key rather than the master key (same model allowlist + budget cap
-        # story as docker-compose's litellm-keygen service).
+        # Point AGENT_BASE_URL at the external agent implementing catalogs/agent-rest.yaml.
+        # The %prod profile requires UTILITY_API_KEY - provide it via the same secret.
+        - name: AGENT_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: openai-credentials
+              key: AGENT_BASE_URL
         - name: UTILITY_API_KEY
           valueFrom:
             secretKeyRef:

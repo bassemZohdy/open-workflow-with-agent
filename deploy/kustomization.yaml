@@ -5,7 +5,12 @@ resources:
 configMapGenerator:
   - name: llm-tool-agent-resources
     files:
-      - agent-loop.sw.yaml=../src/main/resources/sub_flows/agent-loop.sw.yaml
-      - tool-executor.sw.yaml=../src/main/resources/sub_flows/tool-executor.sw.yaml
+      # Workflows (pure YAML - no Java custom functions anywhere, so these run on any
+      # YAML/JSON-only Serverless Workflow platform).
+      - llm-chat.sw.yaml=../src/main/resources/llm-chat.sw.yaml
       - boolean-decision.sw.yaml=../src/main/resources/sub_flows/boolean-decision.sw.yaml
       - choice-decision.sw.yaml=../src/main/resources/sub_flows/choice-decision.sw.yaml
+      # OpenAPI catalogs referenced by the workflows via workflow-uri-definitions
+      # (classpath:/catalogs/...) - must ship with the workflows on every platform.
+      - catalogs/openai-compatible.yaml=../src/main/resources/catalogs/openai-compatible.yaml
+      - catalogs/agent-rest.yaml=../src/main/resources/catalogs/agent-rest.yaml

@@ -20,8 +20,10 @@ class ApiKeyAuthFilterTest {
     @Test
     void rejectsRequestsMissingTheApiKey() {
         given()
+                .contentType("application/json")
+                .body("{\"payload\":{\"task\":\"hi\"}}")
                 .when()
-                .get("/functions/time?timezone=UTC")
+                .post("/agent/sync")
                 .then()
                 .statusCode(401);
     }
@@ -30,8 +32,10 @@ class ApiKeyAuthFilterTest {
     void rejectsRequestsWithTheWrongApiKey() {
         given()
                 .header("Authorization", "Bearer wrong-key")
+                .contentType("application/json")
+                .body("{\"payload\":{\"task\":\"hi\"}}")
                 .when()
-                .get("/functions/time?timezone=UTC")
+                .post("/agent/sync")
                 .then()
                 .statusCode(401);
     }
@@ -40,8 +44,10 @@ class ApiKeyAuthFilterTest {
     void acceptsRequestsWithTheConfiguredApiKey() {
         given()
                 .header("Authorization", "Bearer test-secret-123")
+                .contentType("application/json")
+                .body("{\"payload\":{\"task\":\"hi\"}}")
                 .when()
-                .get("/functions/time?timezone=UTC")
+                .post("/agent/sync")
                 .then()
                 .statusCode(200);
     }
@@ -61,7 +67,7 @@ class ApiKeyAuthFilterTest {
         // (401 when it resolves to a gated route, 404 when it resolves to no route).
         given()
                 .when()
-                .get("/functions/../functions/time?timezone=UTC")
+                .post("/agent/../agent/sync")
                 .then()
                 .statusCode(anyOf(is(401), is(404)));
     }
@@ -70,7 +76,7 @@ class ApiKeyAuthFilterTest {
     void rejectsDoubleSlashVariant() {
         given()
                 .when()
-                .get("/functions//time?timezone=UTC")
+                .post("/agent//sync")
                 .then()
                 .statusCode(anyOf(is(401), is(404)));
     }
@@ -79,7 +85,7 @@ class ApiKeyAuthFilterTest {
     void rejectsEncodedSlashVariant() {
         given()
                 .when()
-                .get("/functions/%2Ftime?timezone=UTC")
+                .post("/agent/%2Fsync")
                 .then()
                 .statusCode(anyOf(is(401), is(404)));
     }
@@ -90,7 +96,7 @@ class ApiKeyAuthFilterTest {
                 .contentType("application/json")
                 .body("{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
                 .when()
-                .post("/llm_tool_agent")
+                .post("/llm_chat")
                 .then()
                 .statusCode(401);
     }

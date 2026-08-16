@@ -32,7 +32,7 @@ public class ProdSecurityDefaults {
         if (apiKey.isBlank()) {
             throw new IllegalStateException(
                     "UTILITY_API_KEY must be set in the %prod profile (container image / OpenShift Serverless Logic) "
-                            + "- refusing to start with unauthenticated /functions/* and workflow endpoints");
+                            + "- refusing to start with unauthenticated agent and workflow endpoints");
         }
     }
 }

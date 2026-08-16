@@ -1,7 +1,7 @@
 # Playwright E2E Testing & Video Recording Suite
 
 ## Overview
-This document describes the automated Playwright End-to-End (E2E) testing framework. The suite exercises the debug console and the remaining local tool endpoints: calculator, time, and MCP.
+This document describes the automated Playwright End-to-End (E2E) testing framework. The suite exercises the debug console, the bundled mock agent endpoints, and the `agent_call` workflow in both sync and async modes (no LLM provider required).
 
 ---
 

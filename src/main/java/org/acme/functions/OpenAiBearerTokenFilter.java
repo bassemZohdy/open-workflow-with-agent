@@ -12,8 +12,8 @@ import org.eclipse.microprofile.config.ConfigProvider;
  * Adds {@code Authorization: Bearer <openai.api-key>} to every call the "openaiCatalog" REST
  * client makes. Registered explicitly via {@code quarkus.rest-client.openaiCatalog.providers} in
  * application.properties - deliberately NOT a {@code @Provider} CDI bean, since that would
- * register it globally on every REST client this app has (including its own local utility/mcp/
- * a2a/etc. catalogs), which would leak the upstream LLM provider's key to the wrong place.
+ * register it globally on every REST client this app has (including its own local
+ * agentCatalog), which would leak the upstream LLM provider's key to the wrong place.
  *
  * <p>This exists because quarkus-openapi-generator's own bearer-auth wiring matches the
  * OpenAPI operation's declared path (baked into the generated JAX-RS client's {@code @Path})

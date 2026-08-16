@@ -1,7 +1,7 @@
 {
   "name": "agentic-openworkflow-e2e",
   "version": "1.0.0",
-  "description": "Playwright E2E test suite for the minimal Agentic OpenWorkflow agent loop, utility tools, and MCP catalog",
+  "description": "Playwright E2E test suite for the OpenWorkflow console, mock agent, and llm_chat/agent_call workflows",
   "main": "index.js",
   "scripts": {
     "test:e2e": "playwright test",

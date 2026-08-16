@@ -1,7 +1,7 @@
-# Container Image Build & Infrastructure Integration (PostgreSQL, Redis, LiteLLM, Ollama)
+# Container Image Build & Infrastructure Integration (PostgreSQL, LiteLLM, Ollama)
 
 ## Overview
-This document describes containerizing the **Agentic OpenWorkflow Reference Implementation** using multi-stage Docker builds and orchestrating runtime infrastructure with **PostgreSQL** (workflow state persistence), **Redis** (agent short-term memory & caching), and a self-contained **LiteLLM + Ollama** LLM stack.
+This document describes containerizing the **OpenWorkflow Reference Implementation** using multi-stage Docker builds and orchestrating runtime infrastructure with **PostgreSQL** (workflow state persistence) and a self-contained **LiteLLM + Ollama** LLM stack. The agent itself is external to the workflow app: it is called over its generic REST API (`AGENT_BASE_URL`).
 
 ---
 
@@ -30,16 +30,15 @@ docker build --file Dockerfile --tag llm-tool-agent:latest .
 The runtime stack is defined in [`docker-compose.yml`](../docker-compose.yml) and includes:
 
 1. **`openworkflow-agent`**: The compiled microservice container.
-2. **`postgres` (PostgreSQL 16.15)**: Durable state persistence for long-running workflows (`QUARKUS_DATASOURCE_*`). Also hosts a separate `litellm_db` database (created by [`postgres-init/01-create-litellm-db.sql`](../postgres-init/01-create-litellm-db.sql)) for LiteLLM's virtual-key store.
-3. **`redis` (Redis 7.4)**: In-memory agent short-term memory (`QUARKUS_REDIS_*`). Runs with `--requirepass` using `REDIS_PASSWORD`.
-4. **`ollama` (pinned 0.32.13)**: Local model runtime, purely so the stack is runnable end-to-end with no external account.
-5. **`ollama-pull`**: One-shot job that pulls `OLLAMA_MODEL` into `ollama` on first start, then exits.
-6. **`litellm` (pinned v1.96.2)**: Generic OpenAI-compatible proxy in front of `ollama` (or any other backend - see [`litellm-config.yaml`](../litellm-config.yaml)). Backed by `litellm_db` for key management and spend tracking.
-7. **`litellm-keygen`**: One-shot job that provisions a **scoped virtual key** (`models=[default-model]`, `max_budget=5.0`) and writes it to the shared `litellm_keys` volume, which the agent container reads at startup.
+2. **`postgres` (PostgreSQL 16.15)**: Durable state persistence for long-running workflows (`QUARKUS_DATASOURCE_*`) - essential for `agent_call`'s async mode, where instances stay suspended in a callback state until the response CloudEvent arrives. Also hosts a separate `litellm_db` database (created by [`postgres-init/01-create-litellm-db.sql`](../postgres-init/01-create-litellm-db.sql)) for LiteLLM's virtual-key store.
+3. **`ollama` (pinned 0.32.13)**: Local model runtime, purely so the stack is runnable end-to-end with no external account.
+4. **`ollama-pull`**: One-shot job that pulls `OLLAMA_MODEL` into `ollama` on first start, then exits.
+5. **`litellm` (pinned v1.96.2)**: Generic OpenAI-compatible proxy in front of `ollama` (or any other backend - see [`litellm-config.yaml`](../litellm-config.yaml)). Backed by `litellm_db` for key management and spend tracking.
+6. **`litellm-keygen`**: One-shot job that provisions a **scoped virtual key** (`models=[default-model]`, `max_budget=5.0`) and writes it to the shared `litellm_keys` volume, which the agent container reads at startup.
 
 ### Network exposure & credentials (hardened defaults)
-- **Every published port is bound to loopback** (`127.0.0.1`): `8080`, `5432`, `6379`, `11434`, `4000`. Nothing is exposed to the LAN.
-- **No insecure default credentials exist.** `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `LITELLM_MASTER_KEY`, and `UTILITY_API_KEY` are REQUIRED: `docker compose up` fails fast with a clear message when any is unset (no `sk-litellm-local-dev` / `openworkflow_secret` fallbacks).
+- **Every published port is bound to loopback** (`127.0.0.1`): `8080`, `5432`, `11434`, `4000`. Nothing is exposed to the LAN.
+- **No insecure default credentials exist.** `POSTGRES_PASSWORD`, `LITELLM_MASTER_KEY`, and `UTILITY_API_KEY` are REQUIRED: `docker compose up` fails fast with a clear message when any is unset.
 - **The application never authenticates to LiteLLM with the master key.** `litellm-keygen` uses the master key once to create a scoped virtual key (model allowlist + budget cap); the app only ever holds that scoped key.
 - **Image tags are pinned** to specific versions (no `latest`/`main-latest` drift).
 
@@ -72,6 +71,10 @@ To point at a different provider instead of the bundled Ollama/LiteLLM pair:
 - **Direct**: set `OPENAI_BASE_URL`/`OPENAI_API_KEY` in `.env` to the provider's own OpenAI-compatible endpoint and drop the `litellm`/`ollama`/`ollama-pull`/`litellm-keygen` services from `docker-compose.yml`.
 - **Via LiteLLM**: keep `OPENAI_BASE_URL=http://litellm:4000/v1` and edit [`litellm-config.yaml`](../litellm-config.yaml)'s `model_list` to route the `default-model` alias at any LiteLLM-supported backend (vLLM, a hosted API, etc.).
 
+### Swapping the agent
+
+The bundled mock agent (same container, `/agent/sync` + `/agent/async`) exists only for demos and tests. To integrate a real agent, set `AGENT_BASE_URL` (and optionally `AGENT_API_KEY`) in `.env` to any service implementing the contract in [`catalogs/agent-rest.yaml`](../src/main/resources/catalogs/agent-rest.yaml) - the workflows need no changes.
+
 ---
 
 ## 3. Environment Variables Configuration
@@ -81,11 +84,11 @@ To point at a different provider instead of the bundled Ollama/LiteLLM pair:
 | `OPENAI_BASE_URL` | no | Base URL for OpenAI-compatible LLM provider (default `http://litellm:4000/v1`) |
 | `OPENAI_API_KEY` | no | Optional explicit provider key. When unset, the app reads the scoped LiteLLM virtual key generated by `litellm-keygen` from `/keys/openai_api_key` |
 | `LITELLM_MASTER_KEY` | **yes** | LiteLLM admin/master key - required by the `litellm` service itself and also used by `litellm-keygen` to provision the scoped virtual key; never given to the app |
-| `UTILITY_API_KEY` | **yes** | Bearer key gating this app's `/functions/*` and workflow endpoints; the %prod profile fails startup without it |
+| `AGENT_BASE_URL` | no | Base URL of the external agent implementing `catalogs/agent-rest.yaml` (default: the bundled mock agent) |
+| `AGENT_API_KEY` | no | Optional bearer credential for the agent API (falls back to `UTILITY_API_KEY`) |
+| `UTILITY_API_KEY` | **yes** | Bearer key gating this app's agent and workflow endpoints; the %prod profile fails startup without it |
 | `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` | no | Global request-rate cap (default `600` in %prod, `0` disables) |
 | `POSTGRES_PASSWORD` | **yes** | PostgreSQL password (also used for the `litellm_db` database) |
 | `POSTGRES_USER` | no | PostgreSQL user (default `openworkflow`) |
-| `REDIS_PASSWORD` | **yes** | Redis `--requirepass` password; avoid `@ : / ?` (embedded in the connection URL) |
 | `OLLAMA_MODEL` | no | Model pulled into `ollama` on first start (default `llama3.1`); must match `litellm-config.yaml`'s backend model |
 | `QUARKUS_DATASOURCE_JDBC_URL` | no | PostgreSQL JDBC connection URL (compose default `jdbc:postgresql://postgres:5432/openworkflow_db`) |
-| `QUARKUS_REDIS_HOSTS` | no | Redis connection URL (compose default `redis://:<REDIS_PASSWORD>@redis:6379`) |
