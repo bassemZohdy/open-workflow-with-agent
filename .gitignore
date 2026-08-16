@@ -11,6 +11,10 @@ logs/
 *.iml
 .vscode/
 *.swp
+.classpath
+.factorypath
+.project
+.settings/
 .DS_Store
 Thumbs.db
 
