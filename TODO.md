@@ -191,7 +191,7 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
   step on `if: env.NVD_API_KEY != ''`, but a step-level `if` cannot see the step's own
   `env:` block (only workflow/job-level env) — the condition is always false, so the SCA
   gate silently never runs even once the secret exists (supersedes the premise of
-  item 1 above). Fix: `if: ${{ secrets.NVD_API_KEY != '' }}` (secrets context IS
+  item 1 above). Fix: `if: env.NVD_API_KEY != ''` with NVD_API_KEY exposed at the security-job level (the secrets context cannot be used directly
   available in step `if`) or move the env to job level. Consider an else-branch that
   fails on `main` when the key is absent so drift is visible.
 - [x] **R4: `ProdSecurityDefaults` fails open on non-"prod" profile names.** The guard

@@ -145,12 +145,14 @@ jobs:
           path: e2e/playwright-report/
           if-no-files-found: ignore
 
-  security:
-    name: Security scans (Trivy, gitleaks, OWASP dependency-check)
-    runs-on: ubuntu-latest
-    needs: test
-    timeout-minutes: 30
-    steps:
+ security:
+   name: Security scans (Trivy, gitleaks, OWASP dependency-check)
+   runs-on: ubuntu-latest
+   needs: test
+   timeout-minutes: 30
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+   steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
@@ -195,16 +197,14 @@ jobs:
 
       # dependency-check without an NVD API key gets rate-limited by the NVD API
       # and can hang/fail spuriously, so only run it when the key is configured
-      # (repo Settings -> Secrets and variables -> Actions -> NVD_API_KEY).
-      - name: Run OWASP dependency-check (blocking on CVSS >= 7)
-        if: ${{ secrets.NVD_API_KEY != '' }}
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: >
+     # (repo Settings -> Secrets and variables -> Actions -> NVD_API_KEY).
+     - name: Run OWASP dependency-check (blocking on CVSS >= 7)
+        if: env.NVD_API_KEY != ''
+       run: >
           mvn --batch-mode --no-transfer-progress
           org.owasp:dependency-check-maven:13.0.0:check -DskipTests
           -DfailBuildOnCVSS=7
 
-      - name: Report skipped OWASP dependency-check
-        if: ${{ secrets.NVD_API_KEY == '' }}
-        run: echo "::warning::OWASP dependency-check skipped because NVD_API_KEY is not configured"
+     - name: Report skipped OWASP dependency-check
+        if: env.NVD_API_KEY == ''
+       run: echo "::warning::OWASP dependency-check skipped because NVD_API_KEY is not configured"
