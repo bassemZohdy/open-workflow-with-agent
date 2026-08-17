@@ -2,6 +2,7 @@ package org.acme.functions;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -22,8 +23,8 @@ public class CloudEventHttpSecurityFilter {
     private static final String CALLBACK_PATH = "/agent/response-event";
     private static final long WINDOW_MILLIS = 60_000L;
 
-    @ConfigProperty(name = "utility.api-key", defaultValue = "")
-    String configuredApiKey;
+    @ConfigProperty(name = "utility.api-key")
+    Optional<String> configuredApiKey;
 
     @ConfigProperty(name = "utility.rate-limit.requests-per-minute", defaultValue = "0")
     int requestsPerMinute;
@@ -37,8 +38,9 @@ public class CloudEventHttpSecurityFilter {
             return;
         }
 
-        if (configuredApiKey != null && !configuredApiKey.isBlank()) {
-            String expected = "Bearer " + configuredApiKey;
+        String apiKey = configuredApiKey.orElse("");
+        if (!apiKey.isBlank()) {
+            String expected = "Bearer " + apiKey;
             String supplied = context.request().getHeader("Authorization");
             if (supplied == null || !constantTimeEquals(supplied, expected)) {
                 reject(context, 401, "missing or invalid API key");
