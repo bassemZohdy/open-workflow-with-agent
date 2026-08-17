@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -21,6 +23,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
 import org.jboss.logging.Logger;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,9 +47,6 @@ public class AgentResource {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     /** Hard cap on how much of the (untrusted) payload is echoed back or logged. */
     private static final int MAX_ECHO_LENGTH = 200;
-    /** Callback dispatch: initial delay, then up to this many attempts on non-2xx answers. */
-    private static final int CALLBACK_ATTEMPTS = 5;
-    private static final int CALLBACK_RETRY_DELAY_MILLIS = 500;
 
     /**
      * Test/diagnostics hook: per-workflow-instance futures that complete with the HTTP
@@ -69,9 +69,35 @@ public class AgentResource {
 
     private HttpClient httpClient;
 
+    @Inject
+    @ConfigProperty(name = "agent.callback.allowed-hosts", defaultValue = "")
+    String allowedCallbackHosts;
+
+    @Inject
+    @ConfigProperty(name = "agent.callback.connect-timeout", defaultValue = "5s")
+    Duration callbackConnectTimeout;
+
+    @Inject
+    @ConfigProperty(name = "agent.callback.request-timeout", defaultValue = "10s")
+    Duration callbackRequestTimeout;
+
+    @Inject
+    @ConfigProperty(name = "agent.callback.attempts", defaultValue = "5")
+    int callbackAttempts;
+
+    @Inject
+    @ConfigProperty(name = "agent.callback.retry-delay", defaultValue = "500ms")
+    Duration callbackRetryDelay;
+
+    private CallbackUrlValidator callbackUrlValidator;
+
     @PostConstruct
     void init() {
-        httpClient = HttpClient.newBuilder().build();
+        httpClient = HttpClient.newBuilder()
+                .connectTimeout(callbackConnectTimeout)
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
+        callbackUrlValidator = new CallbackUrlValidator(allowedCallbackHosts);
     }
 
     @PreDestroy
@@ -129,7 +155,13 @@ public class AgentResource {
             throw failWith == 400 ? new BadRequestException("mock agent induced 400")
                     : new jakarta.ws.rs.InternalServerErrorException("mock agent induced 500");
         }
-        dispatchCallback(callbackUrl, workflowInstanceId, payload);
+        final URI callbackUri;
+        try {
+            callbackUri = callbackUrlValidator.validate(callbackUrl);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException(e.getMessage());
+        }
+        dispatchCallback(callbackUri, workflowInstanceId, payload);
         return Map.of(
                 "status", "accepted",
                 "workflow_instance_id", workflowInstanceId);
@@ -146,7 +178,7 @@ public class AgentResource {
      * agents take far longer than this delay to produce a response; the retry also covers
      * restarts of the receiving endpoint.
      */
-    CompletableFuture<Integer> dispatchCallback(String callbackUrl, String workflowInstanceId, Map<String, Object> payload) {
+    CompletableFuture<Integer> dispatchCallback(URI callbackUri, String workflowInstanceId, Map<String, Object> payload) {
         Map<String, Object> event = Map.ofEntries(
                 Map.entry("specversion", "1.0"),
                 Map.entry("id", UUID.randomUUID().toString()),
@@ -163,22 +195,29 @@ public class AgentResource {
                         "agent", "mock-rest-agent",
                         "output", "Acknowledged: " + summarize(payload))));
         LOG.infof("mock agent dispatching agent_response event to callback url=%s procref=%s",
-                LogSanitizer.safe(callbackUrl), LogSanitizer.safe(workflowInstanceId));
+                LogSanitizer.safe(callbackUri.toString()), LogSanitizer.safe(workflowInstanceId));
         CompletableFuture<Integer> status = DISPATCH_STATUSES
                 .computeIfAbsent(workflowInstanceId, ignored -> new CompletableFuture<>());
         // Initial delay so the caller's callback state can finish suspending its instance
         // before the event lands (see method javadoc).
         return CompletableFuture.runAsync(() -> { },
-                        CompletableFuture.delayedExecutor(CALLBACK_RETRY_DELAY_MILLIS, TimeUnit.MILLISECONDS))
-                .thenCompose(ignored -> dispatchWithRetry(callbackUrl, event, CALLBACK_ATTEMPTS))
+                        CompletableFuture.delayedExecutor(retryDelayMillis(), TimeUnit.MILLISECONDS))
+                .thenCompose(ignored -> dispatchWithRetry(callbackUri, event, Math.max(1, callbackAttempts)))
                 .whenComplete((code, error) -> status.complete(error != null ? -1 : code));
     }
 
     /** Final dispatch outcome per workflow instance id; -1 signals a transport failure. */
-    private CompletableFuture<Integer> dispatchWithRetry(String callbackUrl, Map<String, Object> event, int attemptsLeft) {        HttpRequest request;
+    private CompletableFuture<Integer> dispatchWithRetry(URI callbackUri, Map<String, Object> event, int attemptsLeft) {
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(callbackUri)
+                .timeout(callbackRequestTimeout)
+                .header("Content-Type", "application/cloudevents+json");
+        if (isLocalHost(callbackUri) && allowedCallbackHosts != null && !allowedCallbackHosts.isBlank()
+                && utilityApiKey() != null && !utilityApiKey().isBlank()) {
+            requestBuilder.header("Authorization", "Bearer " + utilityApiKey());
+        }
+        HttpRequest request;
         try {
-            request = HttpRequest.newBuilder(URI.create(callbackUrl))
-                    .header("Content-Type", "application/cloudevents+json")
+            request = requestBuilder
                     .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(event)))
                     .build();
         } catch (Exception e) {
@@ -191,26 +230,43 @@ public class AgentResource {
                     }
                     if (attemptsLeft <= 1) {
                         LOG.warnf("agent_response event not accepted after retries (HTTP %d): %s",
-                                response.statusCode(), response.body());
+                                response.statusCode(), LogSanitizer.safe(response.body()));
                         return CompletableFuture.completedFuture(response.statusCode());
                     }
-                    return scheduleRetry(callbackUrl, event, attemptsLeft - 1);
+                    return scheduleRetry(callbackUri, event, attemptsLeft - 1);
                 })
                 .exceptionallyCompose(error -> {
                     if (attemptsLeft <= 1) {
                         LOG.warnf("agent_response event dispatch failed after retries: %s", error.getMessage());
                         return CompletableFuture.completedFuture(-1);
                     }
-                    return scheduleRetry(callbackUrl, event, attemptsLeft - 1);
+                    return scheduleRetry(callbackUri, event, attemptsLeft - 1);
                 });
     }
 
-    private CompletableFuture<Integer> scheduleRetry(String callbackUrl, Map<String, Object> event, int attemptsLeft) {
+    private CompletableFuture<Integer> scheduleRetry(URI callbackUri, Map<String, Object> event, int attemptsLeft) {
         LOG.infof("agent_response event rejected; retrying in %d ms (%d attempts left)",
-                CALLBACK_RETRY_DELAY_MILLIS, attemptsLeft);
+                retryDelayMillis(), attemptsLeft);
         return CompletableFuture.runAsync(() -> { },
-                        CompletableFuture.delayedExecutor(CALLBACK_RETRY_DELAY_MILLIS, TimeUnit.MILLISECONDS))
-                .thenCompose(ignored -> dispatchWithRetry(callbackUrl, event, attemptsLeft));
+                        CompletableFuture.delayedExecutor(retryDelayMillis(), TimeUnit.MILLISECONDS))
+                .thenCompose(ignored -> dispatchWithRetry(callbackUri, event, attemptsLeft));
+    }
+
+    private long retryDelayMillis() {
+        return Math.max(1L, callbackRetryDelay.toMillis());
+    }
+
+    private String utilityApiKey() {
+        return org.eclipse.microprofile.config.ConfigProvider.getConfig()
+                .getOptionalValue("utility.api-key", String.class)
+                .orElse("");
+    }
+
+    private static boolean isLocalHost(URI uri) {
+        String host = uri.getHost();
+        return host != null && (host.equalsIgnoreCase("localhost")
+                || host.equals("127.0.0.1")
+                || host.equals("::1"));
     }
 
     private static Map<String, Object> payloadOf(Map<String, Object> body) {

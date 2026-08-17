@@ -18,7 +18,7 @@ states:
   - name: Validate Input
     type: switch
     dataConditions:
-      - condition: '${ (.question // "") | type == "string" and ((.question // "") | trim | length > 0) }'
+      - condition: '${ . as $root | (($root.question // "") | type == "string") and (($root.question // "") | length > 0) }'
         transition: Ask Boolean Question
     defaultCondition:
       transition: Invalid Input
@@ -48,9 +48,9 @@ states:
   - name: Evaluate Boolean Answer
     type: switch
     dataConditions:
-      - condition: '${ (((.llm_response.choices[0].message.content // "") | trim | ascii_downcase) == "yes") }'
+      - condition: '${ ((.llm_response.choices[0].message.content // "") == "yes") }'
         transition: Return Yes
-      - condition: '${ (((.llm_response.choices[0].message.content // "") | trim | ascii_downcase) == "no") }'
+      - condition: '${ ((.llm_response.choices[0].message.content // "") == "no") }'
         transition: Return No
     defaultCondition:
       transition: Invalid Model Answer

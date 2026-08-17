@@ -37,6 +37,27 @@ while IFS= read -r -d '' src_file; do
 done < <(find "$src_dir" -type f -print0)
 
 if [ "$check_mode" = "--check" ]; then
+    src_listing="$(mktemp)"
+    dst_listing="$(mktemp)"
+    trap 'rm -f "$src_listing" "$dst_listing"' EXIT
+    (cd "$src_dir" && find . -type f -printf '%P\n' | sort) >"$src_listing"
+    # The runner resource directory also contains application.properties and the debug
+    # console. Compare the generated workflow/catalog package only, by excluding those
+    # intentional runner-only files from the destination listing.
+    (cd "$dst_dir" && find . -type f -printf '%P\n' | sort) \
+        | grep -E '(^|/)([^/]+\.sw\.yaml|catalogs/[^/]+\.yaml)$' >"$dst_listing" || true
+    missing="$(comm -23 "$src_listing" "$dst_listing")"
+    extra="$(comm -13 "$src_listing" "$dst_listing")"
+    if [ -n "$missing" ]; then
+        echo "MISSING from src/main/resources/:" >&2
+        printf '%s\n' "$missing" >&2
+        fail=1
+    fi
+    if [ -n "$extra" ]; then
+        echo "STALE files in src/main/resources/ not present under workflows/:" >&2
+        printf '%s\n' "$extra" >&2
+        fail=1
+    fi
     if [ "$fail" -eq 0 ]; then
         echo "OK: src/main/resources mirrors workflows/ byte-for-byte"
     else

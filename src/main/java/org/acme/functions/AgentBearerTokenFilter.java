@@ -28,16 +28,37 @@ import org.eclipse.microprofile.config.ConfigProvider;
  */
 public class AgentBearerTokenFilter implements ClientRequestFilter {
 
-    private static final String BEARER_TOKEN = ConfigProvider.getConfig()
-            .getOptionalValue("agent.api-key", String.class)
-            .filter(key -> !key.isBlank())
-            .map(key -> "Bearer " + key)
-            .orElse(null);
-
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
-        if (BEARER_TOKEN != null) {
-            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, BEARER_TOKEN);
+        var config = ConfigProvider.getConfig();
+        String explicitKey = config.getOptionalValue("agent.api-key", String.class).orElse("");
+        String key = explicitKey.isBlank() && isSameOrigin(requestContext.getUri(), configuredAgentUri(config))
+                ? config.getOptionalValue("utility.api-key", String.class).orElse("")
+                : explicitKey;
+        if (!key.isBlank()) {
+            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, "Bearer " + key);
         }
+    }
+
+    private static java.net.URI configuredAgentUri(org.eclipse.microprofile.config.Config config) {
+        return config.getOptionalValue("quarkus.rest-client.agentCatalog.url", String.class)
+                .map(java.net.URI::create)
+                .orElse(null);
+    }
+
+    private static boolean isSameOrigin(java.net.URI target, java.net.URI configured) {
+        if (target == null || configured == null || target.getHost() == null || configured.getHost() == null) {
+            return false;
+        }
+        return target.getScheme().equalsIgnoreCase(configured.getScheme())
+                && target.getHost().equalsIgnoreCase(configured.getHost())
+                && effectivePort(target) == effectivePort(configured);
+    }
+
+    private static int effectivePort(java.net.URI uri) {
+        if (uri.getPort() >= 0) {
+            return uri.getPort();
+        }
+        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
     }
 }

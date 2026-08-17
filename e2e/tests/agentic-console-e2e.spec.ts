@@ -38,8 +38,8 @@ test.describe('Orchestrator OpenWorkflow Console & API E2E Verification', () => 
   });
 
   test('agent_call workflow accepts an async request and suspends', async ({ request }) => {
-    // The start call returns while the instance is suspended in the callback state; the
-    // response CloudEvent round-trip (suspend -> resume) is covered by the Maven suite.
+    // The start call returns while the instance is suspended in the callback state; then
+    // poll until the mock agent's authenticated CloudEvent resumes and completes it.
     const response = await request.post('/agent_call', {
       data: {
         mode: 'async',
@@ -52,6 +52,14 @@ test.describe('Orchestrator OpenWorkflow Console & API E2E Verification', () => 
     expect(body.id).toBeTruthy();
     // While suspended the response either carries agent_response: null or omits the key.
     expect(body.workflowdata.agent_response ?? null).toBeNull();
+
+    await expect.poll(async () => {
+      const completed = await request.get(`/agent_call/${body.id}`);
+      if (completed.status() === 404 || completed.status() === 410) return 'evicted';
+      if (completed.status() !== 200) return `http-${completed.status()}`;
+      const completedBody = await completed.json();
+      return completedBody.workflowdata?.agent_response?.agent || 'suspended';
+    }, { timeout: 30_000, intervals: [500] }).toMatch(/^(evicted|mock-rest-agent)$/);
   });
 
   test('agent_call workflow rejects an invalid mode', async ({ request }) => {

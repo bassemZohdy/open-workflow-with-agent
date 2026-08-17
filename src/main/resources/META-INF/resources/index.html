@@ -60,6 +60,9 @@
   "max_tokens": 64
 }</textarea>
 
+      <label for="apiKey">API key (optional; kept in this browser session)</label>
+      <input id="apiKey" type="password" autocomplete="off" placeholder="UTILITY_API_KEY">
+
       <div>
         <button id="invoke" class="primary">Execute Request</button>
         <button id="clear" class="secondary">Clear Output</button>
@@ -98,6 +101,9 @@
   const invoke = document.getElementById('invoke');
   const endpointEl = document.getElementById('endpoint');
   const payloadEl = document.getElementById('payload');
+  const apiKeyEl = document.getElementById('apiKey');
+  apiKeyEl.value = sessionStorage.getItem('openworkflow-api-key') || '';
+  apiKeyEl.addEventListener('input', () => sessionStorage.setItem('openworkflow-api-key', apiKeyEl.value));
 
   const PRESETS = {
     llm_chat: {
@@ -149,7 +155,9 @@
     const ep = endpointEl.value.trim().replace(/^\//, '');
     let body; try { body = JSON.parse(payloadEl.value); } catch (e) { output.textContent = `Invalid JSON payload\n\n${e}`; invoke.disabled = false; return; }
     try {
-      const response = await fetch(`/${ep}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+      const headers = {'Content-Type': 'application/json'};
+      if (apiKeyEl.value.trim()) headers.Authorization = `Bearer ${apiKeyEl.value.trim()}`;
+      const response = await fetch(`/${ep}`, { method: 'POST', headers, body: JSON.stringify(body) });
       const content = await response.text();
       let parsed; try { parsed = JSON.parse(content); } catch (_) { parsed = content; }
       output.textContent = `HTTP ${response.status}\n\n${pretty(parsed)}`;

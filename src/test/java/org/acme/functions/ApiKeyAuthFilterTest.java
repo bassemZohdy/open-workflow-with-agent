@@ -101,6 +101,16 @@ class ApiKeyAuthFilterTest {
                 .statusCode(401);
     }
 
+    @Test
+    void rejectsUnauthenticatedCloudEventIngress() {
+        given()
+                .contentType("application/cloudevents+json")
+                .body("{}").when()
+                .post("/agent/response-event")
+                .then()
+                .statusCode(401);
+    }
+
     public static final class WithApiKey implements QuarkusTestProfile {
         @Override
         public Map<String, String> getConfigOverrides() {
