@@ -140,7 +140,7 @@ export OPENAI_API_KEY=your-openai-key
 # export AGENT_BASE_URL=http://my-real-agent:8080
 ```
 
-For a self-contained local stack (LiteLLM in front of Ollama, PostgreSQL) with no external account needed, use `docker compose` instead - see [`docs/13-docker-and-compose.md`](docs/13-docker-and-compose.md). Copy [`.env.example`](.env.example) to `.env` and fill in the **required** secrets (`POSTGRES_PASSWORD`, `LITELLM_MASTER_KEY`, `UTILITY_API_KEY`) - compose fails fast if any is unset. The stack binds every port to `127.0.0.1`, pins all image tags, and provisions a **scoped LiteLLM virtual key** (model allowlist + budget cap) for the application, so it never authenticates to the proxy with the master key.
+For a self-contained local stack (LiteLLM in front of Ollama, PostgreSQL) with no external account needed, use `docker compose` instead - see [`docs/13-docker-and-compose.md`](docs/13-docker-and-compose.md). Copy [`.env.example`](.env.example) to `.env` and fill in the **required** secrets (`POSTGRES_PASSWORD`, `OPENWORKFLOW_DB_PASSWORD`, `LITELLM_DB_PASSWORD`, `LITELLM_MASTER_KEY`, `UTILITY_API_KEY`) - compose fails fast if any is unset. The stack binds every port to `127.0.0.1`, pins all image tags, provisions dedicated non-superuser roles for the application and LiteLLM, and provisions a **scoped LiteLLM virtual key** (model allowlist + budget cap) for the application, so it never authenticates to the proxy with the master key.
 
 #### Securing the endpoints
 

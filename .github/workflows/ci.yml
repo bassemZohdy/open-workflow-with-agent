@@ -78,6 +78,9 @@ jobs:
           kubectl kustomize deploy --load-restrictor
           LoadRestrictionsNone >/dev/null
 
+      - name: Validate Docker Compose configuration
+        run: ./deploy/validate-compose.sh
+
   container:
     name: Build container image
     runs-on: ubuntu-latest

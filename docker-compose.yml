@@ -24,8 +24,8 @@ services:
       # PostgreSQL SonataFlow Persistence
       - QUARKUS_DATASOURCE_DB_KIND=postgresql
       - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgres:5432/openworkflow_db
-      - QUARKUS_DATASOURCE_USERNAME=${POSTGRES_USER:-openworkflow}
-      - QUARKUS_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      - QUARKUS_DATASOURCE_USERNAME=${OPENWORKFLOW_DB_USER:-openworkflow_app}
+      - QUARKUS_DATASOURCE_PASSWORD=${OPENWORKFLOW_DB_PASSWORD:?set OPENWORKFLOW_DB_PASSWORD in .env}
       # External agent REST API (catalogs/agent-rest.yaml). Defaults to this container's own
       # bundled mock agent; point AGENT_BASE_URL at a real agent to integrate one.
       - AGENT_BASE_URL=${AGENT_BASE_URL:-http://localhost:8080}
@@ -36,6 +36,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-bootstrap:
+        condition: service_completed_successfully
       litellm-keygen:
         condition: service_completed_successfully
     restart: unless-stopped
@@ -48,18 +50,41 @@ services:
       - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_DB=openworkflow_db
-      - POSTGRES_USER=${POSTGRES_USER:-openworkflow}
+      # This is a bootstrap administrator only. Runtime services use the dedicated roles
+      # created by postgres-bootstrap and never receive this password.
+      - POSTGRES_USER=${POSTGRES_USER:-openworkflow_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Creates the separate litellm_db database used for LiteLLM virtual-key management.
-      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openworkflow} -d openworkflow_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openworkflow_admin} -d openworkflow_db"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+  # Idempotently provisions least-privilege runtime roles and database ownership on every
+  # compose start. This also upgrades an existing postgres_data volume without requiring a
+  # destructive `docker compose down -v`.
+  postgres-bootstrap:
+    image: postgres:16.15-alpine
+    container_name: openworkflow-postgres-bootstrap
+    environment:
+      - POSTGRES_ADMIN_USER=${POSTGRES_USER:-openworkflow_admin}
+      - POSTGRES_ADMIN_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      - OPENWORKFLOW_DB_NAME=openworkflow_db
+      - OPENWORKFLOW_DB_USER=${OPENWORKFLOW_DB_USER:-openworkflow_app}
+      - OPENWORKFLOW_DB_PASSWORD=${OPENWORKFLOW_DB_PASSWORD:?set OPENWORKFLOW_DB_PASSWORD in .env}
+      - LITELLM_DB_NAME=litellm_db
+      - LITELLM_DB_USER=${LITELLM_DB_USER:-litellm}
+      - LITELLM_DB_PASSWORD=${LITELLM_DB_PASSWORD:?set LITELLM_DB_PASSWORD in .env}
+    volumes:
+      - ./postgres-init/bootstrap.sh:/bootstrap.sh:ro
+    entrypoint: ["/bin/sh", "/bootstrap.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   # Local model runtime. Swappable: point OPENAI_BASE_URL/LiteLLM at any other OpenAI-compatible
   # provider (vLLM, a hosted API, etc.) instead - this service exists purely for a self-contained
@@ -101,15 +126,17 @@ services:
       - "127.0.0.1:4000:4000"
     environment:
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env}
-      # Postgres-backed key management (virtual keys + spend tracking); database created by
-      # postgres-init/01-create-litellm-db.sql.
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-openworkflow}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/litellm_db
+      # Postgres-backed key management (virtual keys + spend tracking); LiteLLM receives only
+      # its dedicated database role, never the bootstrap administrator credentials.
+      - DATABASE_URL=postgresql://${LITELLM_DB_USER:-litellm}:${LITELLM_DB_PASSWORD:?set LITELLM_DB_PASSWORD in .env}@postgres:5432/litellm_db
     volumes:
       - ./litellm-config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-bootstrap:
+        condition: service_completed_successfully
       ollama-pull:
         condition: service_completed_successfully
     restart: unless-stopped
@@ -128,6 +155,10 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        if [ -s /keys/openai_api_key ]; then
+          echo "Existing scoped virtual key found; reusing it"
+          exit 0
+        fi
         echo "Waiting for LiteLLM proxy at http://litellm:4000 ..."
         until curl -fsS http://litellm:4000/health/liveliness >/dev/null 2>&1; do sleep 2; done
         echo "Generating scoped virtual key (models=[default-model], max_budget=5.0) ..."
@@ -140,7 +171,8 @@ services:
         if [ -z "$$KEY" ]; then
           echo "Failed to generate virtual key:"; cat /tmp/keygen.json; exit 1
         fi
-        printf '%s' "$$KEY" > /keys/openai_api_key
+        printf '%s' "$$KEY" > /keys/.openai_api_key.tmp
+        mv /keys/.openai_api_key.tmp /keys/openai_api_key
         echo "Virtual key written to /keys/openai_api_key"
     depends_on:
       litellm:
