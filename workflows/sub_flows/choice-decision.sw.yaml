@@ -43,13 +43,14 @@ states:
               - role: user
                 content: '${ (.question // "") + "\nAllowed options: " + ((.options | join(", ")) // "") }'
         actionDataFilter:
-          toStateData: '.llm_response'
+          results: '.choices[0].message.content'
+          toStateData: '.selected_option'
     transition: Validate Selected Option
 
   - name: Validate Selected Option
     type: switch
     dataConditions:
-      - condition: '${ . as $root | any($root.options[]; . == (($root.llm_response.choices // [])[0].message.content // "")) }'
+      - condition: '${ . as $root | any($root.options[]; . == ($root.selected_option // "")) }'
         transition: Return Selected Option
     defaultCondition:
       transition: Invalid Model Answer
@@ -58,7 +59,6 @@ states:
     type: inject
     data:
       valid: true
-      selected_option: '${ (.llm_response.choices[0].message.content // "") }'
     end: true
 
   - name: Invalid Input
