@@ -58,7 +58,7 @@ states:
     type: inject
     data:
       valid: true
-      selected_option: '${ .llm_response.choices[0].message.content // "" }'
+      selected_option: '${ (.llm_response.choices[0].message.content // "") }'
     end: true
 
   - name: Invalid Input
