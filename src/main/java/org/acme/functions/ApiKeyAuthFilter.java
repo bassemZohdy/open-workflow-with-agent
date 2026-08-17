@@ -28,7 +28,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @Priority(Priorities.AUTHENTICATION)
 public class ApiKeyAuthFilter implements ContainerRequestFilter {
 
-    @ConfigProperty(name = "utility.api-key")
+    @ConfigProperty(name = "utility.api-key", defaultValue = "")
     Optional<String> configuredApiKey;
 
     @Override
