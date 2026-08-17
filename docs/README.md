@@ -2,7 +2,11 @@
 
 This directory contains documentation for the **orchestrator-only reference implementation**: workflows that call an LLM (catalog function) and an external agent (generic REST, sync and async). The agent itself - its internals, tools, MCP, A2A - is out of scope by design.
 
-Reusable workflow definitions are organized under `src/main/resources/sub_flows/`; the public `llm_chat` and `agent_call` entry points remain at the resources root.
+Reusable workflow definitions are organized under `workflows/sub_flows/`; the public
+`llm_chat` and `agent_call` entry points live at the `workflows/` package root. The
+whole package (`*.sw.yaml` + `catalogs/`) is the project's main deliverable - the
+Java sources are only the reference runner that executes it (see the README's
+"Repository Layout").
 
 > **Scope note**: this implementation keeps only the two integration building blocks a
 > workflow orchestrator needs - an OpenAI-compatible LLM catalog call, and a generic

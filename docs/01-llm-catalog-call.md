@@ -4,8 +4,8 @@ The simplest agentic building block: a workflow calls an LLM exactly like any ot
 service, through an OpenAPI **catalog function**. No agent internals, no tools, no MCP -
 just a declarative service call the workflow engine can express natively.
 
-* Workflow: [`llm-chat.sw.yaml`](../src/main/resources/llm-chat.sw.yaml)
-* Catalog: [`openai-compatible.yaml`](../src/main/resources/catalogs/openai-compatible.yaml)
+* Workflow: [`llm-chat.sw.yaml`](../workflows/llm-chat.sw.yaml)
+* Catalog: [`openai-compatible.yaml`](../workflows/catalogs/openai-compatible.yaml)
 
 ---
 

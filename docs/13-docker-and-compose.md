@@ -73,7 +73,7 @@ To point at a different provider instead of the bundled Ollama/LiteLLM pair:
 
 ### Swapping the agent
 
-The bundled mock agent (same container, `/agent/sync` + `/agent/async`) exists only for demos and tests. To integrate a real agent, set `AGENT_BASE_URL` (and optionally `AGENT_API_KEY`) in `.env` to any service implementing the contract in [`catalogs/agent-rest.yaml`](../src/main/resources/catalogs/agent-rest.yaml) - the workflows need no changes.
+The bundled mock agent (same container, `/agent/sync` + `/agent/async`) exists only for demos and tests. To integrate a real agent, set `AGENT_BASE_URL` (and optionally `AGENT_API_KEY`) in `.env` to any service implementing the contract in [`catalogs/agent-rest.yaml`](../workflows/catalogs/agent-rest.yaml) - the workflows need no changes.
 
 ---
 

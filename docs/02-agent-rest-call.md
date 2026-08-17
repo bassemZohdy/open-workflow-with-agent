@@ -4,8 +4,8 @@ Treat the agent as a **black box** invoked through a generic REST contract. The 
 never inspects the agent's internals (tools, MCP, A2A, memory, planning - all out of scope);
 it only knows two operations defined in an OpenAPI catalog.
 
-* Workflow: [`agent-call.sw.yaml`](../src/main/resources/agent-call.sw.yaml)
-* Catalog: [`agent-rest.yaml`](../src/main/resources/catalogs/agent-rest.yaml)
+* Workflow: [`agent-call.sw.yaml`](../workflows/agent-call.sw.yaml)
+* Catalog: [`agent-rest.yaml`](../workflows/catalogs/agent-rest.yaml)
 * Reference agent: [`AgentResource`](../src/main/java/org/acme/functions/AgentResource.java) (bundled mock, `/agent/sync` + `/agent/async`)
 
 ---
@@ -120,5 +120,5 @@ curl -X POST http://localhost:8080/agent_call \
 ```
 
 To integrate a **real** agent, implement the two operations from
-[`agent-rest.yaml`](../src/main/resources/catalogs/agent-rest.yaml) and point
+[`agent-rest.yaml`](../workflows/catalogs/agent-rest.yaml) and point
 `AGENT_BASE_URL` at it - the workflows need no changes.

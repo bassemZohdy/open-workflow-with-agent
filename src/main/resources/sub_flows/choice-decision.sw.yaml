@@ -1,0 +1,77 @@
+id: choice_decision
+version: '1.0'
+specVersion: '0.8'
+name: Choice Decision
+description: Reusable sub-flow that asks an AI agent to select exactly one allowed option
+start: Validate Input
+
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      openaiCatalog: classpath:/catalogs/openai-compatible.yaml
+
+functions:
+  - name: openaiChatCompletion
+    operation: openaiCatalog#chatCompletions
+
+states:
+  - name: Validate Input
+    type: switch
+    dataConditions:
+      - condition: '${ (.question // "") | type == "string" and ((.question // "") | trim | length > 0) and ((.options // []) | type == "array") and ((.options // []) | length > 0) and all(.options[]; type == "string") }'
+        transition: Ask Choice Question
+    defaultCondition:
+      transition: Invalid Input
+
+  - name: Ask Choice Question
+    type: operation
+    actions:
+      - name: Generate Choice Decision
+        functionRef:
+          refName: openaiChatCompletion
+          arguments:
+            model: 'default-model'
+            temperature: 0
+            max_tokens: 32
+            messages:
+              - role: system
+                content: >-
+                  You are a strict option-selection service. Select exactly one value
+                  from the allowed options supplied by the user. Return only the
+                  selected option exactly as written, with no explanation, punctuation,
+                  markdown, or additional text.
+              - role: user
+                content: '${ (.question // "") + "\nAllowed options: " + ((.options | join(", ")) // "") }'
+        actionDataFilter:
+          toStateData: '.llm_response'
+    transition: Validate Selected Option
+
+  - name: Validate Selected Option
+    type: switch
+    dataConditions:
+      - condition: '${ . as $root | any($root.options[]; . == ((($root.llm_response.choices // [])[0].message.content // "") | trim)) }'
+        transition: Return Selected Option
+    defaultCondition:
+      transition: Invalid Model Answer
+
+  - name: Return Selected Option
+    type: inject
+    data:
+      valid: true
+      selected_option: '${ (.llm_response.choices[0].message.content // "") | trim }'
+    end: true
+
+  - name: Invalid Input
+    type: inject
+    data:
+      valid: false
+      error: question and a non-empty options list are required
+    end: true
+
+  - name: Invalid Model Answer
+    type: inject
+    data:
+      valid: false
+      error: AI response was not one of the allowed options
+      raw_answer: '${ .llm_response.choices[0].message.content // "" }'
+    end: true

@@ -19,10 +19,10 @@ This project provides a **minimal reference implementation** for **OpenWorkflow*
 
 | Feature | Description | Workflow | Catalog |
 | :--- | :--- | :--- | :--- |
-| **LLM Catalog Call** | Single chat completion with in-workflow guardrails (message caps, role restrictions, model allowlist, `max_tokens` clamping) | [`llm-chat.sw.yaml`](src/main/resources/llm-chat.sw.yaml) | [`openai-compatible.yaml`](src/main/resources/catalogs/openai-compatible.yaml) |
-| **Agent Call (Sync)** | Blocking REST call to a generic agent API; response stored as `agent_response` | [`agent-call.sw.yaml`](src/main/resources/agent-call.sw.yaml) | [`agent-rest.yaml`](src/main/resources/catalogs/agent-rest.yaml) |
-| **Agent Call (Async)** | Fire-and-continue `callback` state; instance suspends and resumes on the agent's `agent_response` CloudEvent (correlated via `kogitoprocrefid`) | [`agent-call.sw.yaml`](src/main/resources/agent-call.sw.yaml) | [`agent-rest.yaml`](src/main/resources/catalogs/agent-rest.yaml) |
-| **Decision Subflows** | Strict typed AI decisions (yes/no, or one value from an option list) | [`boolean-decision.sw.yaml`](src/main/resources/sub_flows/boolean-decision.sw.yaml), [`choice-decision.sw.yaml`](src/main/resources/sub_flows/choice-decision.sw.yaml) | [`openai-compatible.yaml`](src/main/resources/catalogs/openai-compatible.yaml) |
+| **LLM Catalog Call** | Single chat completion with in-workflow guardrails (message caps, role restrictions, model allowlist, `max_tokens` clamping) | [`llm-chat.sw.yaml`](workflows/llm-chat.sw.yaml) | [`openai-compatible.yaml`](workflows/catalogs/openai-compatible.yaml) |
+| **Agent Call (Sync)** | Blocking REST call to a generic agent API; response stored as `agent_response` | [`agent-call.sw.yaml`](workflows/agent-call.sw.yaml) | [`agent-rest.yaml`](workflows/catalogs/agent-rest.yaml) |
+| **Agent Call (Async)** | Fire-and-continue `callback` state; instance suspends and resumes on the agent's `agent_response` CloudEvent (correlated via `kogitoprocrefid`) | [`agent-call.sw.yaml`](workflows/agent-call.sw.yaml) | [`agent-rest.yaml`](workflows/catalogs/agent-rest.yaml) |
+| **Decision Subflows** | Strict typed AI decisions (yes/no, or one value from an option list) | [`boolean-decision.sw.yaml`](workflows/sub_flows/boolean-decision.sw.yaml), [`choice-decision.sw.yaml`](workflows/sub_flows/choice-decision.sw.yaml) | [`openai-compatible.yaml`](workflows/catalogs/openai-compatible.yaml) |
 
 ---
 
@@ -42,18 +42,52 @@ agent_call (public entry point)
 ```
 
 The agent is a **black box**: the workflows only speak the two-operation contract in
-[`agent-rest.yaml`](src/main/resources/catalogs/agent-rest.yaml). This repo bundles a mock
+[`agent-rest.yaml`](workflows/catalogs/agent-rest.yaml). This repo bundles a mock
 implementation ([`AgentResource`](src/main/java/org/acme/functions/AgentResource.java)) so the
 demos and tests are self-contained - point `AGENT_BASE_URL` at any real agent implementing
 the same contract and nothing else changes.
 
 ---
 
+## Repository Layout: Specs First, Runner Second
+
+The **main deliverable is the OpenWorkflow spec package** - pure Serverless Workflow
+YAML/JSON plus its OpenAPI catalogs, portable to any platform that runs the spec
+(OpenShift Serverless Logic, plain SonataFlow, ...):
+
+```text
+workflows/                  <- THE deliverable: spec YAML/JSON + catalogs
+  llm-chat.sw.yaml             public LLM catalog call
+  agent-call.sw.yaml           public generic agent call (sync/async)
+  sub_flows/                   reusable decision sub-flows
+  catalogs/                    OpenAPI catalogs (workflow-uri-definitions)
+src/main/java/              <- reference runner only: mock agent + endpoint glue
+src/main/resources/         <- runner config (application.properties, console)
+deploy/                     <- gitops packaging of the spec package
+```
+
+The Java sources are only the **reference runner** that executes the specs locally;
+`deploy/` packages the same spec files for a YAML-only platform. Nothing in the
+workflows references Java - every function resolves to a catalog operation.
+
+One SonataFlow constraint shapes the layout: the Kogito codegen discovers workflow
+definitions only under `src/main/resources/` (hardcoded in `AppPaths`, the Maven
+`<resources>` model is not consulted). The runner therefore keeps a **generated
+mirror** of the canonical package there - `deploy/sync-runner-resources.sh` copies
+`workflows/` -> `src/main/resources/` byte-for-byte, and CI fails on drift
+(`--check`). Edit specs only in `workflows/`, run the sync script, commit both.
+
+`deploy/sonataflow.yaml` embeds `agent-call.sw.yaml` as `spec.flow` (required by the
+SonataFlow CR); it is **regenerated** from the canonical file by
+[`deploy/generate-sonataflow.sh`](deploy/generate-sonataflow.sh) - CI fails on drift.
+
+---
+
 ## Core Components
 
-* **LLM Chat Workflow** ([`llm-chat.sw.yaml`](src/main/resources/llm-chat.sw.yaml)): public HTTP entry point enforcing server-side request guardrails (message count/length caps, `user`/`assistant`-only roles, model allowlist) around a single catalog LLM call.
-* **Agent Call Workflow** ([`agent-call.sw.yaml`](src/main/resources/agent-call.sw.yaml)): input validation, sync path (operation state), async path (callback state with `$WORKFLOW.instanceId` correlation), and structured error states for agent HTTP failures.
-* **Decision Sub-Flows** ([`boolean-decision.sw.yaml`](src/main/resources/sub_flows/boolean-decision.sw.yaml) and [`choice-decision.sw.yaml`](src/main/resources/sub_flows/choice-decision.sw.yaml)): strict typed AI decisions returning yes/no or one value from a caller-provided option list.
+* **LLM Chat Workflow** ([`llm-chat.sw.yaml`](workflows/llm-chat.sw.yaml)): public HTTP entry point enforcing server-side request guardrails (message count/length caps, `user`/`assistant`-only roles, model allowlist) around a single catalog LLM call.
+* **Agent Call Workflow** ([`agent-call.sw.yaml`](workflows/agent-call.sw.yaml)): input validation, sync path (operation state), async path (callback state with `$WORKFLOW.instanceId` correlation), and structured error states for agent HTTP failures.
+* **Decision Sub-Flows** ([`boolean-decision.sw.yaml`](workflows/sub_flows/boolean-decision.sw.yaml) and [`choice-decision.sw.yaml`](workflows/sub_flows/choice-decision.sw.yaml)): strict typed AI decisions returning yes/no or one value from a caller-provided option list.
 * **Mock Agent** ([`AgentResource`](src/main/java/org/acme/functions/AgentResource.java)): reference implementation of the generic agent contract (`/agent/sync`, `/agent/async` + CloudEvent completion). Swap it for a real agent via `AGENT_BASE_URL`.
 
 ### Java source policy (workflow portability)

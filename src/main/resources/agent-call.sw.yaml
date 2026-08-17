@@ -1,0 +1,139 @@
+id: agent_call
+version: '1.0'
+specVersion: '0.8'
+name: Agent Call
+description: >-
+  Invoke an external agent over its generic REST API. Synchronous mode waits for the
+  HTTP response; asynchronous mode fires the request without waiting and resumes when
+  the agent's response CloudEvent (type agent_response) arrives - SonataFlow's native
+  callback-state async mechanism.
+start: Validate Request
+
+# The agent is a black box. This workflow only knows the generic REST contract in
+# catalogs/agent-rest.yaml:
+#   * sync:  POST {AGENT_BASE_URL}/agent/sync with the opaque agent_request body -> the
+#            HTTP response becomes agent_response
+#   * async: POST {AGENT_BASE_URL}/agent/async with {callback_url, workflow_instance_id,
+#            payload} -> 202; later the agent POSTs a CloudEvent back to callback_url
+#            with extension kogitoprocrefid = workflow_instance_id, which resumes this
+#            suspended instance with the event data as agent_response
+#
+# Input contract:
+#   mode          - "sync" (default) or "async"
+#   agent_request - opaque JSON object forwarded verbatim to the agent
+#   callback_url  - async only; where the agent posts the response CloudEvent.
+#                   Defaults to this application's /agent/response-event channel
+#                   (adjust when deploying behind an ingress).
+
+events:
+  - name: agentResponseEvent
+    source: ""
+    type: agent_response
+
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      agentCatalog: classpath:/catalogs/agent-rest.yaml
+
+errors:
+  - name: AgentHttpError
+    code: "400"
+  - name: AgentServerError
+    code: "500"
+
+functions:
+  - name: agentSyncCall
+    operation: agentCatalog#agentSyncCall
+  - name: agentAsyncCall
+    operation: agentCatalog#agentAsyncCall
+
+states:
+  - name: Validate Request
+    type: switch
+    dataConditions:
+      - condition: >-
+          ${ ((.mode // "sync") == "sync") or ((.mode // "sync") == "async") }
+        transition: Validate Payload
+    defaultCondition:
+      transition: Invalid Request
+
+  - name: Validate Payload
+    type: switch
+    dataConditions:
+      - condition: >-
+          ${ ((.agent_request // {}) | type == "object")
+             and (((.callback_url // "") | type == "string")) }
+        transition: Route Mode
+    defaultCondition:
+      transition: Invalid Request
+
+  - name: Route Mode
+    type: switch
+    dataConditions:
+      - condition: '${ (.mode // "sync") == "async" }'
+        transition: Call Agent Async
+    defaultCondition:
+      transition: Call Agent Sync
+
+  # Synchronous: the workflow blocks on the agent's HTTP response.
+  - name: Call Agent Sync
+    type: operation
+    actions:
+      - name: Invoke Agent Synchronously
+        functionRef:
+          refName: agentSyncCall
+          arguments:
+            # Opaque agent payload - the workflow neither inspects nor modifies it. The
+            # request body is {"payload": {...}} per the catalog's sync contract.
+            payload: (.agent_request // {})
+        actionDataFilter:
+          toStateData: '.agent_response'
+    onErrors:
+      - errorRef: AgentHttpError
+        transition: Agent Call Failed
+      - errorRef: AgentServerError
+        transition: Agent Call Failed
+    end: true
+
+  # Asynchronous: fire the request (the agent immediately answers 202), then suspend this
+  # instance until the agent's agent_response CloudEvent arrives. $WORKFLOW.instanceId is
+  # passed to the agent so it can stamp kogitoprocrefid on the completion event for
+  # correlation - this is SonataFlow's native async workflow mechanism, no polling.
+  - name: Call Agent Async
+    type: callback
+    action:
+      name: Fire Asynchronous Agent Request
+      functionRef:
+        refName: agentAsyncCall
+        arguments:
+          callback_url: '(.callback_url // "http://localhost:8080/agent/response-event")'
+          workflow_instance_id: '$WORKFLOW.instanceId'
+          payload: '(.agent_request // {})'
+      actionDataFilter:
+        # The 202 acceptance body carries no data the workflow needs - discard it so the
+        # workflow output stays {mode, agent_request, callback_url, agent_response}.
+        useResults: false
+    eventRef: agentResponseEvent
+    eventDataFilter:
+      toStateData: '.agent_response'
+    onErrors:
+      - errorRef: AgentHttpError
+        transition: Agent Call Failed
+      - errorRef: AgentServerError
+        transition: Agent Call Failed
+    end: true
+
+  - name: Invalid Request
+    type: inject
+    data:
+      error: >-
+        request failed server-side validation: mode must be "sync" or "async" (default
+        sync), agent_request must be a JSON object when present, and callback_url must be
+        a string when present
+    end: true
+
+  - name: Agent Call Failed
+    type: inject
+    data:
+      error: agent call failed with an HTTP error from the agent
+    end: true

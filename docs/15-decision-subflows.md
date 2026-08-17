@@ -4,7 +4,7 @@ The decision subflows use the existing OpenAI-compatible catalog and keep the AI
 
 ## Boolean decision
 
-Use `boolean_decision` from `src/main/resources/sub_flows/boolean-decision.sw.yaml` with input like:
+Use `boolean_decision` from `workflows/sub_flows/boolean-decision.sw.yaml` with input like:
 
 ```json
 {
@@ -26,7 +26,7 @@ The model must return exactly `yes` or `no`, ignoring case and surrounding white
 
 ## Constrained choice
 
-Use `choice_decision` from `src/main/resources/sub_flows/choice-decision.sw.yaml` with input like:
+Use `choice_decision` from `workflows/sub_flows/choice-decision.sw.yaml` with input like:
 
 ```json
 {

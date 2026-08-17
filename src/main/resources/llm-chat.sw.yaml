@@ -1,0 +1,87 @@
+id: llm_chat
+version: '1.0'
+specVersion: '0.8'
+name: LLM Chat
+description: Single LLM chat completion call through the OpenAI-compatible catalog function
+start: Validate Request
+
+# The simplest agentic building block: one catalog function call to an OpenAI-compatible
+# /v1/chat/completions endpoint, with server-side guardrails enforced in the workflow
+# itself so they travel with the workflow when deployed to OpenShift Serverless Logic:
+#   * messages: array of 1..20 entries, each content a string of at most 8192 chars
+#   * roles:   only "user" and "assistant" are accepted - callers cannot inject role:"system"
+#              prompts through the public entry point
+#   * model:   must be in the allowlist below (edit this list to expose other models/aliases)
+
+extensions:
+  - extensionid: workflow-uri-definitions
+    definitions:
+      openaiCatalog: classpath:/catalogs/openai-compatible.yaml
+
+# SonataFlow surfaces catalog HTTP errors as WorkItemExecutionException carrying the HTTP
+# status as its error code; these map 4xx/5xx provider failures to a structured workflow
+# error instead of an aborted instance.
+errors:
+  - name: LlmHttpError
+    code: "400"
+  - name: LlmServerError
+    code: "500"
+
+functions:
+  - name: openaiChatCompletion
+    operation: openaiCatalog#chatCompletions
+
+states:
+  - name: Validate Request
+    type: switch
+    dataConditions:
+      - condition: >-
+          ${ ((.messages // []) | type == "array") and ((.messages | length) >= 1) and ((.messages | length) <= 20)
+             and all(.messages[]; ((.content // "") | type == "string") and ((.content // "" | length) <= 8192))
+             and all(.messages[]; (.role == "user") or (.role == "assistant"))
+             and ((.model // "default-model") as $m
+                  | ["default-model", "llama3.1", "llama3.2", "llama3.3", "gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "claude-3-5-haiku"]
+                    | any(. == $m)) }
+        transition: Call LLM
+    defaultCondition:
+      transition: Invalid Request
+
+  - name: Call LLM
+    type: operation
+    actions:
+      - name: Generate Response
+        functionRef:
+          refName: openaiChatCompletion
+          arguments:
+            # Caller-supplied "model" in the request body always wins (subject to the allowlist
+            # above). "default-model" is a fallback alias - point it at any backend via the
+            # OPENAI_BASE_URL provider (e.g. a LiteLLM model alias).
+            model: (.model // "default-model")
+            # Server-side clamps: cap max_tokens at 4096 and keep history bounded to the most
+            # recent 20 messages.
+            messages: (.messages | if (length > 20) then .[-20:] else . end)
+            temperature: (.temperature // 0.7)
+            max_tokens: ((.max_tokens // 512) | if . > 4096 then 4096 else . end)
+        actionDataFilter:
+          toStateData: '.llm_response'
+    onErrors:
+      - errorRef: LlmHttpError
+        transition: LLM Call Failed
+      - errorRef: LlmServerError
+        transition: LLM Call Failed
+    end: true
+
+  - name: Invalid Request
+    type: inject
+    data:
+      error: >-
+        request failed server-side validation: messages must be an array of 1-20 entries with
+        string content of at most 8192 chars, roles limited to user|assistant, and model must be
+        in the workflow allowlist
+    end: true
+
+  - name: LLM Call Failed
+    type: inject
+    data:
+      error: LLM call failed with an HTTP error from the provider
+    end: true

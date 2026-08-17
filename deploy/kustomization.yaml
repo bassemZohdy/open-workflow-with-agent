@@ -5,12 +5,17 @@ resources:
 configMapGenerator:
   - name: llm-tool-agent-resources
     files:
-      # Workflows (pure YAML - no Java custom functions anywhere, so these run on any
-      # YAML/JSON-only Serverless Workflow platform).
-      - llm-chat.sw.yaml=../src/main/resources/llm-chat.sw.yaml
-      - boolean-decision.sw.yaml=../src/main/resources/sub_flows/boolean-decision.sw.yaml
-      - choice-decision.sw.yaml=../src/main/resources/sub_flows/choice-decision.sw.yaml
-      # OpenAPI catalogs referenced by the workflows via workflow-uri-definitions
-      # (classpath:/catalogs/...) - must ship with the workflows on every platform.
-      - catalogs/openai-compatible.yaml=../src/main/resources/catalogs/openai-compatible.yaml
-      - catalogs/agent-rest.yaml=../src/main/resources/catalogs/agent-rest.yaml
+      # Workflows (pure YAML - no Java custom functions, so they run on any
+      # YAML/JSON-only Serverless Workflow platform). Canonical package lives at
+      # ../workflows/; src/main/resources/ keeps the generated runner mirror
+      # (deploy/sync-runner-resources.sh --check enforces byte-identity in CI).
+      # NOTE: agent-call.sw.yaml is intentionally NOT listed here: it is the
+      # primary flow embedded in sonataflow.yaml's spec.flow (regenerated
+      # from the canonical file by deploy/generate-sonataflow.sh - not by hand).
+      - llm-chat.sw.yaml=../workflows/llm-chat.sw.yaml
+      - boolean-decision.sw.yaml=../workflows/sub_flows/boolean-decision.sw.yaml
+      - choice-decision.sw.yaml=../workflows/sub_flows/choice-decision.sw.yaml
+      # OpenAPI catalogs referenced via workflow-uri-definitions
+      # (classpath:/catalogs/...) - ship with the workflows on every platform.
+      - catalogs/openai-compatible.yaml=../workflows/catalogs/openai-compatible.yaml
+      - catalogs/agent-rest.yaml=../workflows/catalogs/agent-rest.yaml
