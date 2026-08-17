@@ -36,7 +36,7 @@ class DecisionSubflowContractTest {
         assertTrue(workflow.contains("id: choice_decision"));
         assertTrue(workflow.contains("Allowed options:"));
         assertTrue(workflow.contains("any($root.options[]"));
-        assertTrue(workflow.contains("selected_option:"));
+        assertTrue(workflow.contains("toStateData: '.selected_option'"));
         assertTrue(workflow.contains("Invalid Model Answer"));
         assertTrue(workflow.contains("question and a non-empty options list are required"));
     }
