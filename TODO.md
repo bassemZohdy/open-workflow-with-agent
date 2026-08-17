@@ -226,11 +226,12 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
   (`AgentBearerTokenFilter.java:31-35`, `OpenAiBearerTokenFilter.java`) — credential
   rotation requires an app restart. Resolve per-request (cheap in a
   `ClientRequestFilter`) or document the restart requirement.
-- [ ] **R10: Compose credential hygiene.** Single Postgres superuser owns both
-  `openworkflow_db` and `litellm_db` (app compromise ⇒ key-store access) — provision
-  dedicated non-superusers via `postgres-init/`; `litellm-keygen` mints a fresh budgeted
-  key on every `docker compose up` and never revokes predecessors — make it idempotent
-  (reuse existing key file) or revoke on down.
+- [x] **R10: Compose credential hygiene.** Replaced the shared Postgres runtime credential
+  with an idempotent `postgres-bootstrap` service that creates/updates dedicated
+  `openworkflow_app` and `litellm` non-superuser roles, assigns separate database ownership,
+  and revokes public database access. `litellm-keygen` now reuses an existing scoped key file
+  and writes new keys atomically, preventing duplicate virtual keys on repeated starts.
+  `deploy/validate-compose.sh` and CI validate the complete Compose graph.
 - [x] **R11: `AgentResource.java:178` formatting glitch** — method brace and first
   statement share one line in `dispatchWithRetry`; split it.
 - [x] **R12: CI efficiency + hygiene.** `mvn package -DskipTests` runs in both `test`
@@ -280,3 +281,17 @@ Maven wrapper; kustomize/generate/sync CI gates.
 - Trivy 0.74.0 (`--scanners vuln,secret --severity HIGH,CRITICAL`) — 0 findings;
   full-severity scan shows only the 3 documented `trivy.yaml` suppressions
 - gitleaks 8.24.3 (action-bundled version) — `no leaks found` over all 35 commits
+
+## TODO follow-up verification (2026-08-17)
+
+- R10 Compose credential hygiene implemented: dedicated database roles, idempotent bootstrap,
+  and idempotent LiteLLM key provisioning.
+- `sh -n postgres-init/bootstrap.sh` and `sh -n deploy/validate-compose.sh` passed.
+- Compose validation is wired into CI; local execution is unavailable in this environment
+  because Docker Compose is not installed.
+- GitHub Actions run 55 passed tests/package, Playwright E2E, container build, deployment
+  manifest validation, Trivy, and gitleaks. OWASP dependency-check remained skipped because
+  the repository has no `NVD_API_KEY` secret.
+- The OpenShift/Knative callback smoke test remains blocked until a Serverless Logic/Eventing
+  cluster and reachable agent endpoint are available; no `oc` or `kubectl` context is present
+  in this environment.

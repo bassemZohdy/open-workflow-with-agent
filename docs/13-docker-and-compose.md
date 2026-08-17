@@ -30,15 +30,17 @@ docker build --file Dockerfile --tag llm-tool-agent:latest .
 The runtime stack is defined in [`docker-compose.yml`](../docker-compose.yml) and includes:
 
 1. **`openworkflow-agent`**: The compiled microservice container.
-2. **`postgres` (PostgreSQL 16.15)**: Durable state persistence for long-running workflows (`QUARKUS_DATASOURCE_*`) - essential for `agent_call`'s async mode, where instances stay suspended in a callback state until the response CloudEvent arrives. Also hosts a separate `litellm_db` database (created by [`postgres-init/01-create-litellm-db.sql`](../postgres-init/01-create-litellm-db.sql)) for LiteLLM's virtual-key store.
-3. **`ollama` (pinned 0.32.13)**: Local model runtime, purely so the stack is runnable end-to-end with no external account.
-4. **`ollama-pull`**: One-shot job that pulls `OLLAMA_MODEL` into `ollama` on first start, then exits.
-5. **`litellm` (pinned v1.96.2)**: Generic OpenAI-compatible proxy in front of `ollama` (or any other backend - see [`litellm-config.yaml`](../litellm-config.yaml)). Backed by `litellm_db` for key management and spend tracking.
-6. **`litellm-keygen`**: One-shot job that provisions a **scoped virtual key** (`models=[default-model]`, `max_budget=5.0`) and writes it to the shared `litellm_keys` volume, which the agent container reads at startup.
+2. **`postgres` (PostgreSQL 16.15)**: Durable state persistence for long-running workflows (`QUARKUS_DATASOURCE_*`) - essential for `agent_call`'s async mode, where instances stay suspended in a callback state until the response CloudEvent arrives.
+3. **`postgres-bootstrap`**: Idempotently creates `openworkflow_db` and `litellm_db`, assigns each to a dedicated non-superuser role, revokes public database access, and updates role passwords on every compose start. It also upgrades an existing `postgres_data` volume without requiring destructive volume deletion.
+4. **`ollama` (pinned 0.32.13)**: Local model runtime, purely so the stack is runnable end-to-end with no external account.
+5. **`ollama-pull`**: One-shot job that pulls `OLLAMA_MODEL` into `ollama` on first start, then exits.
+6. **`litellm` (pinned v1.96.2)**: Generic OpenAI-compatible proxy in front of `ollama` (or any other backend - see [`litellm-config.yaml`](../litellm-config.yaml)). Backed by its dedicated `litellm_db` role/database for key management and spend tracking.
+7. **`litellm-keygen`**: One-shot job that provisions a **scoped virtual key** (`models=[default-model]`, `max_budget=5.0`) on first start and reuses the existing key file on subsequent starts, preventing duplicate untracked keys.
 
 ### Network exposure & credentials (hardened defaults)
 - **Every published port is bound to loopback** (`127.0.0.1`): `8080`, `5432`, `11434`, `4000`. Nothing is exposed to the LAN.
-- **No insecure default credentials exist.** `POSTGRES_PASSWORD`, `LITELLM_MASTER_KEY`, and `UTILITY_API_KEY` are REQUIRED: `docker compose up` fails fast with a clear message when any is unset.
+- **No insecure default credentials exist.** `POSTGRES_PASSWORD`, `OPENWORKFLOW_DB_PASSWORD`, `LITELLM_DB_PASSWORD`, `LITELLM_MASTER_KEY`, and `UTILITY_API_KEY` are REQUIRED: `docker compose up` fails fast with a clear message when any is unset.
+- **Runtime database roles are least-privilege.** The bootstrap administrator is used only by `postgres-bootstrap`; the application and LiteLLM receive separate non-superuser credentials for separate databases.
 - **The application never authenticates to LiteLLM with the master key.** `litellm-keygen` uses the master key once to create a scoped virtual key (model allowlist + budget cap); the app only ever holds that scoped key.
 - **Image tags are pinned** to specific versions (no `latest`/`main-latest` drift).
 
@@ -89,7 +91,11 @@ The bundled mock agent (same container, `/agent/sync` + `/agent/async`) exists o
 | `AGENT_CALLBACK_ALLOWED_HOSTS` | no | Explicit host allowlist for internal/private async callback destinations; dev/test allow localhost automatically |
 | `UTILITY_API_KEY` | **yes** | Bearer key gating this app's agent and workflow endpoints; the %prod profile fails startup without it |
 | `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` | no | Global request-rate cap (default `600` outside dev/test; `0` disables) |
-| `POSTGRES_PASSWORD` | **yes** | PostgreSQL password (also used for the `litellm_db` database) |
-| `POSTGRES_USER` | no | PostgreSQL user (default `openworkflow`) |
+| `POSTGRES_PASSWORD` | **yes** | Bootstrap PostgreSQL administrator password; never passed to runtime services |
+| `POSTGRES_USER` | no | Bootstrap PostgreSQL administrator role (default `openworkflow_admin`) |
+| `OPENWORKFLOW_DB_USER` | no | Dedicated application database role (default `openworkflow_app`) |
+| `OPENWORKFLOW_DB_PASSWORD` | **yes** | Dedicated application database role password |
+| `LITELLM_DB_USER` | no | Dedicated LiteLLM database role (default `litellm`) |
+| `LITELLM_DB_PASSWORD` | **yes** | Dedicated LiteLLM database role password |
 | `OLLAMA_MODEL` | no | Model pulled into `ollama` on first start (default `llama3.1`); must match `litellm-config.yaml`'s backend model |
 | `QUARKUS_DATASOURCE_JDBC_URL` | no | PostgreSQL JDBC connection URL (compose default `jdbc:postgresql://postgres:5432/openworkflow_db`) |
