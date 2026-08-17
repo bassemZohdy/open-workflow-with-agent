@@ -36,6 +36,13 @@ jobs:
       - name: Package application
         run: mvn --batch-mode --no-transfer-progress package -DskipTests
 
+      - name: Upload packaged application
+        uses: actions/upload-artifact@v7
+        with:
+          name: quarkus-app
+          path: target/quarkus-app/
+          if-no-files-found: error
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -104,8 +111,11 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Package application
-        run: mvn --batch-mode --no-transfer-progress package -DskipTests
+      - name: Download packaged application
+        uses: actions/download-artifact@v8
+        with:
+          name: quarkus-app
+          path: target/quarkus-app
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -187,10 +197,14 @@ jobs:
       # and can hang/fail spuriously, so only run it when the key is configured
       # (repo Settings -> Secrets and variables -> Actions -> NVD_API_KEY).
       - name: Run OWASP dependency-check (blocking on CVSS >= 7)
-        if: env.NVD_API_KEY != ''
+        if: ${{ secrets.NVD_API_KEY != '' }}
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: >
           mvn --batch-mode --no-transfer-progress
           org.owasp:dependency-check-maven:13.0.0:check -DskipTests
           -DfailBuildOnCVSS=7
+
+      - name: Report skipped OWASP dependency-check
+        if: ${{ secrets.NVD_API_KEY == '' }}
+        run: echo "::warning::OWASP dependency-check skipped because NVD_API_KEY is not configured"

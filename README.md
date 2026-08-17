@@ -144,6 +144,17 @@ For a self-contained local stack (LiteLLM in front of Ollama, PostgreSQL) with n
 
 #### Securing the endpoints
 
+The async callback ingress (/agent/response-event) is a Reactive Messaging HTTP endpoint,
+not a JAX-RS resource, so it is protected by a Vert.x HTTP filter as well as the normal
+JAX-RS API-key filter. Callback URLs are limited to http/https, capped at 2,048 characters,
+and rejected when they resolve to private, loopback, link-local, or reserved addresses
+unless the destination is explicitly listed in AGENT_CALLBACK_ALLOWED_HOSTS. The bundled
+local mock uses the localhost allowlist in dev/test; packaged deployments should set an
+explicit callback allowlist only when an internal callback destination is intentional.
+
+The debug console includes an optional API-key field stored in sessionStorage and sends it
+on workflow and agent requests when supplied.
+
 By default every endpoint (`/agent/*`, the workflow entry points, the debug console) is open - fine for local development, not for anything reachable beyond localhost. Two knobs:
 
 | Variable | Effect when set |

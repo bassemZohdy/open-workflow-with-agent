@@ -77,7 +77,8 @@ spec:
         dataConditions:
           - condition: >-
               ${ ((.agent_request // {}) | type == "object")
-                 and (((.callback_url // "") | type == "string")) }
+                 and (((.callback_url // "") | type == "string"))
+                 and (((.callback_url // "") | length) <= 2048) }
             transition: Route Mode
         defaultCondition:
           transition: Invalid Request
@@ -144,7 +145,7 @@ spec:
           error: >-
             request failed server-side validation: mode must be "sync" or "async" (default
             sync), agent_request must be a JSON object when present, and callback_url must be
-            a string when present
+            a string of at most 2048 characters when present
         end: true
     
       - name: Agent Call Failed

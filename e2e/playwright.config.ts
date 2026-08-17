@@ -35,6 +35,7 @@ export default defineConfig({
           env: {
             UTILITY_API_KEY: apiKey,
             UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
+            AGENT_CALLBACK_ALLOWED_HOSTS: "localhost,127.0.0.1,::1",
           },
           url: `${baseURL}/q/health`,
           reuseExistingServer: !process.env.CI,

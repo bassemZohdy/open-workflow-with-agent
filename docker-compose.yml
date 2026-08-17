@@ -30,6 +30,7 @@ services:
       # bundled mock agent; point AGENT_BASE_URL at a real agent to integrate one.
       - AGENT_BASE_URL=${AGENT_BASE_URL:-http://localhost:8080}
       - AGENT_API_KEY=${AGENT_API_KEY:-}
+      - AGENT_CALLBACK_ALLOWED_HOSTS=${AGENT_CALLBACK_ALLOWED_HOSTS:-}
     volumes:
       - litellm_keys:/keys:ro
     depends_on:

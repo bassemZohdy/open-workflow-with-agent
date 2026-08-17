@@ -164,7 +164,7 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
 
 **HIGH — fix before exposing beyond localhost**
 
-- [ ] **R1: Unauthenticated CloudEvent resume channel.** `mp.messaging.incoming.agent_response`
+- [x] **R1: Unauthenticated CloudEvent resume channel.** `mp.messaging.incoming.agent_response`
   (`application.properties:34-35`, path `/agent/response-event`) is served by the
   reactive-messaging `quarkus-http` connector as an extension endpoint — NOT a JAX-RS
   resource — so `ApiKeyAuthFilter`/`RateLimitFilter` never see it. Anyone who can reach
@@ -175,7 +175,7 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
   `utility.api-key`, then emit to the channel), or HMAC-sign `kogitoprocrefid`, or at
   minimum block `/agent/response-event` at the ingress/network level. Add a regression
   test: with `UTILITY_API_KEY` set, a forged CloudEvent POST must be rejected.
-- [ ] **R2: SSRF via caller-controlled `callback_url`.** `agent-call.sw.yaml:109` forwards
+- [x] **R2: SSRF via caller-controlled `callback_url`.** `agent-call.sw.yaml:109` forwards
   any string to the agent; `AgentResource.java:119-132,180` POSTs to
   `URI.create(callbackUrl)` with no scheme/host validation — a full server-side-request
   primitive in dev (unauthenticated) and authenticated SSRF in prod. Amplifier: the
@@ -187,31 +187,31 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
 
 **MEDIUM**
 
-- [ ] **R3: CI OWASP dependency-check step can never execute.** `ci.yml:190` gates the
+- [x] **R3: CI OWASP dependency-check step can never execute.** `ci.yml:190` gates the
   step on `if: env.NVD_API_KEY != ''`, but a step-level `if` cannot see the step's own
   `env:` block (only workflow/job-level env) — the condition is always false, so the SCA
   gate silently never runs even once the secret exists (supersedes the premise of
   item 1 above). Fix: `if: ${{ secrets.NVD_API_KEY != '' }}` (secrets context IS
   available in step `if`) or move the env to job level. Consider an else-branch that
   fails on `main` when the key is absent so drift is visible.
-- [ ] **R4: `ProdSecurityDefaults` fails open on non-"prod" profile names.** The guard
+- [x] **R4: `ProdSecurityDefaults` fails open on non-"prod" profile names.** The guard
   enforces only when `quarkus.profile == "prod"` literally; running the prod image with
   `QUARKUS_PROFILE=dev` (or any custom name) skips the API-key requirement AND the
   `%prod` rate-limit default — unauthenticated, unthrottled deployment from one env var.
   Fix: invert to a blocklist (skip only `dev`/`test`/`test-with-reload`), or key off
   `LaunchMode.current()` with an explicit opt-out config.
-- [ ] **R5: Outbound agent credential defaults to the front-door key for external
+- [x] **R5: Outbound agent credential defaults to the front-door key for external
   agents.** `application.properties:25` (`agent.api-key=${AGENT_API_KEY:${UTILITY_API_KEY:}}`)
   sends the app's own inbound master key as bearer to ANY `AGENT_BASE_URL` that doesn't
   set `AGENT_API_KEY` — one compromised third-party agent endpoint = full API access to
   this app. Fix: apply the `UTILITY_API_KEY` fallback only when the agent resolves to
   this app's own origin; otherwise require `AGENT_API_KEY` explicitly (fail fast).
-- [ ] **R6: Mock agent `HttpClient` has no timeouts.** `AgentResource.java:74,180-187` —
+- [x] **R6: Mock agent `HttpClient` has no timeouts.** `AgentResource.java:74,180-187` —
   no `connectTimeout`, no request `.timeout()`: a black-holing callback target hangs
   dispatch futures indefinitely (5 retries compound it). Fix:
   `connectTimeout(Duration.ofSeconds(5))` + `request.timeout(Duration.ofSeconds(10))`,
   plus a unit test that a never-responding target completes within budget.
-- [ ] **R7: `sync-runner-resources.sh` misses stale mirror files.** The check only
+- [x] **R7: `sync-runner-resources.sh` misses stale mirror files.** The check only
   iterates `workflows/` → `src/main/resources/`; a file deleted from `workflows/` but
   left in the mirror passes CI silently (Kogito would still discover the stale copy).
   Fix: also diff the reverse direction (or compare sorted file listings) and fail on
@@ -219,10 +219,10 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
 
 **LOW**
 
-- [ ] **R8: Debug console sends no `Authorization` header** (`index.html:152`) — every
+- [x] **R8: Debug console sends no `Authorization` header** (`index.html:152`) — every
   console action 401s in `%prod`, nudging operators to disable auth. Add an optional
   API-key field (sessionStorage) that attaches the header.
-- [ ] **R9: Bearer filters resolve tokens `static final` at class-load**
+- [x] **R9: Bearer filters resolve tokens `static final` at class-load**
   (`AgentBearerTokenFilter.java:31-35`, `OpenAiBearerTokenFilter.java`) — credential
   rotation requires an app restart. Resolve per-request (cheap in a
   `ClientRequestFilter`) or document the restart requirement.
@@ -231,15 +231,15 @@ Local verification after review: `mvnw clean test` 20/20, sync/sonataflow `--che
   dedicated non-superusers via `postgres-init/`; `litellm-keygen` mints a fresh budgeted
   key on every `docker compose up` and never revokes predecessors — make it idempotent
   (reuse existing key file) or revoke on down.
-- [ ] **R11: `AgentResource.java:178` formatting glitch** — method brace and first
+- [x] **R11: `AgentResource.java:178` formatting glitch** — method brace and first
   statement share one line in `dispatchWithRetry`; split it.
-- [ ] **R12: CI efficiency + hygiene.** `mvn package -DskipTests` runs in both `test`
+- [x] **R12: CI efficiency + hygiene.** `mvn package -DskipTests` runs in both `test`
   and `e2e` jobs — upload `target/quarkus-app/` as an artifact and download it in `e2e`
   (saves ~1-2 min); add `trivy-results.sarif` + `gitleaks-results.sarif` to
   `.gitignore`; consider a Maven enforcer/dependency:tree assertion that the resolved
   netty ≥ 4.1.136 / jackson ≥ 2.21.5 floors hold (the first-import-wins BOM override in
   `pom.xml` silently stops working if BOM order changes).
-- [ ] **R13: Test gaps.** `DecisionSubflowContractTest` only asserts YAML string
+- [x] **R13: Test gaps.** `DecisionSubflowContractTest` only asserts YAML string
   presence — add runtime tests through `OpenAiMockApiResource` (valid yes/no answer,
   invalid/ambiguous answer → `valid:false`); the e2e async test verifies suspension but
   not the resume round-trip (poll for completion with `agent_response`); bump
@@ -255,6 +255,19 @@ Maven wrapper; kustomize/generate/sync CI gates.
 ---
 
 ## Verification results (2026-08-17, after CI security fixes + spec-first restructure)
+
+## Follow-up hardening verification (cleanup branch)
+
+- Protected the Reactive Messaging CloudEvent ingress with a Vert.x HTTP filter, including
+  API-key authentication and rate limiting.
+- Added callback URL scheme/length/DNS/private-network validation, redirect disabling,
+  request/connect timeouts, bounded retries, and sanitized error-body logging.
+- Made packaged/custom profiles secure by default, prevented external-agent credential
+  fallback, fixed dynamic credential rotation, and added stale-mirror detection.
+- Added runtime decision-subflow tests, callback timeout tests, authenticated CloudEvent
+  regression coverage, and E2E async resume polling.
+- Maven/CI execution remains the authoritative validation for these changes; the local
+  environment could not resolve Maven Central, so the new suite must be confirmed by CI.
 
 - `mvn clean test` — 20/20 passed (AgentCallTest 5, LlmChatWorkflowTest 3,
   ApiKeyAuthFilterTest 8, RateLimitFilterTest 2, DecisionSubflowContractTest 2)

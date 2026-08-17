@@ -27,7 +27,7 @@
     <jackson.bom.version>2.21.5</jackson.bom.version>
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
-    <version.surefire.plugin>3.0.0-M7</version.surefire.plugin>
+    <version.surefire.plugin>3.5.5</version.surefire.plugin>
     <version.resources.plugin>3.4.0</version.resources.plugin>
   </properties>
 
@@ -95,6 +95,10 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-arc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-reactive-routes</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

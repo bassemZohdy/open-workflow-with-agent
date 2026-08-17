@@ -95,6 +95,12 @@ mp.messaging.incoming.agent_response.path=/agent/response-event
 On OpenShift Serverless Logic the same event arrives through the platform's Knative Eventing
 broker - the workflow YAML is identical, only the platform config differs.
 
+The quarkus-http ingress is protected by the application's Vert.x HTTP security filter
+because it is not a Jakarta REST resource and therefore does not pass through the normal
+JAX-RS API-key filter. Callback targets are validated for scheme, length, DNS resolution,
+and private-address SSRF before the bundled mock agent sends a request. Use
+AGENT_CALLBACK_ALLOWED_HOSTS only for deliberate internal destinations.
+
 ---
 
 ## Try it

@@ -25,16 +25,13 @@ import org.eclipse.microprofile.config.ConfigProvider;
  */
 public class OpenAiBearerTokenFilter implements ClientRequestFilter {
 
-    private static final String BEARER_TOKEN = ConfigProvider.getConfig()
-            .getOptionalValue("openai.api-key", String.class)
-            .filter(key -> !key.isBlank())
-            .map(key -> "Bearer " + key)
-            .orElse(null);
-
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
-        if (BEARER_TOKEN != null) {
-            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, BEARER_TOKEN);
+        String key = ConfigProvider.getConfig()
+                .getOptionalValue("openai.api-key", String.class)
+                .orElse("");
+        if (!key.isBlank()) {
+            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, "Bearer " + key);
         }
     }
 }

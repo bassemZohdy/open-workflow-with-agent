@@ -19,6 +19,8 @@ import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
  * <ul>
  *   <li>"provider-error" anywhere in the body - the mock answers HTTP 500, exercising the
  *       workflow's {@code onErrors} mapping to a structured error.</li>
+ *   <li>decision prompts return deterministic yes/no/option values so the decision
+ *       sub-flows can be exercised through their real workflow endpoints.</li>
  *   <li>default - a plain assistant completion with no tool calls.</li>
  * </ul>
  */
@@ -49,8 +51,15 @@ public class OpenAiMockApiResource implements QuarkusTestResourceLifecycleManage
             respond(exchange, 500, "{\"error\":{\"message\":\"mock provider failure\",\"type\":\"server_error\"}}");
             return;
         }
+        String answer = requestBody.contains("strict boolean decision service")
+                ? (requestBody.contains("ambiguous-answer") ? "maybe"
+                        : requestBody.contains("false-decision") ? "no" : "yes")
+                : requestBody.contains("strict option-selection service")
+                        ? (requestBody.contains("invalid-answer") ? "maybe" : "blue")
+                        : "Mock answer from provider";
         respond(exchange, 200, "{\"id\":\"mock-final\",\"object\":\"chat.completion\",\"choices\":[{\"index\":0,"
-                + "\"message\":{\"role\":\"assistant\",\"content\":\"Mock answer from provider\"},\"finish_reason\":\"stop\"}]}");
+                + "\"message\":{\"role\":\"assistant\",\"content\":\"" + answer
+                + "\"},\"finish_reason\":\"stop\"}]}");
     }
 
     private static void respond(HttpExchange exchange, int status, String body) throws IOException {

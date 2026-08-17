@@ -8,6 +8,14 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
+import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.junit.QuarkusTest;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
+
+@QuarkusTest
+@QuarkusTestResource(OpenAiMockApiResource.class)
 class DecisionSubflowContractTest {
     @Test
     void booleanDecisionRequiresStrictYesOrNoAndReturnsTypedDecision() throws IOException {
@@ -31,6 +39,57 @@ class DecisionSubflowContractTest {
         assertTrue(workflow.contains("selected_option:"));
         assertTrue(workflow.contains("Invalid Model Answer"));
         assertTrue(workflow.contains("question and a non-empty options list are required"));
+    }
+
+    @Test
+    void booleanDecisionExecutesThroughTheProviderAndReturnsTypedResult() {
+        given()
+                .contentType("application/json")
+                .body("{\"question\":\"Is the sky blue?\"}")
+                .when()
+                .post("/boolean_decision")
+                .then()
+                .statusCode(201)
+                .body("workflowdata.valid", equalTo(true))
+                .body("workflowdata.decision", equalTo(true))
+                .body("workflowdata.answer", equalTo("yes"));
+    }
+
+    @Test
+    void invalidBooleanAnswerIsReportedWithoutCoercion() {
+        given()
+                .contentType("application/json")
+                .body("{\"question\":\"ambiguous-answer\"}")
+                .when()
+                .post("/boolean_decision")
+                .then()
+                .statusCode(201)
+                .body("workflowdata.valid", equalTo(false));
+    }
+
+    @Test
+    void choiceDecisionAcceptsOnlyOneCallerProvidedOption() {
+        given()
+                .contentType("application/json")
+                .body("{\"question\":\"pick a color\",\"options\":[\"red\",\"blue\"]}")
+                .when()
+                .post("/choice_decision")
+                .then()
+                .statusCode(201)
+                .body("workflowdata.valid", equalTo(true))
+                .body("workflowdata.selected_option", equalTo("blue"));
+    }
+
+    @Test
+    void invalidChoiceAnswerIsReportedWithoutCoercion() {
+        given()
+                .contentType("application/json")
+                .body("{\"question\":\"invalid-answer\",\"options\":[\"red\",\"blue\"]}")
+                .when()
+                .post("/choice_decision")
+                .then()
+                .statusCode(201)
+                .body("workflowdata.valid", equalTo(false));
     }
 
     private static String resource(String path) throws IOException {
