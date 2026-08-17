@@ -18,7 +18,7 @@ states:
   - name: Validate Input
     type: switch
     dataConditions:
-      - condition: '${ . as $root | (($root.question // "") | type == "string") and (($root.question // "") | trim | length > 0) and (($root.options // []) | type == "array") and (($root.options // []) | length > 0) and all($root.options[]; type == "string") }'
+      - condition: '${ . as $root | (($root.question // "") | type == "string") and (($root.question // "") | length > 0) and (($root.options // []) | type == "array") and (($root.options // []) | length > 0) and all($root.options[]; type == "string") }'
         transition: Ask Choice Question
     defaultCondition:
       transition: Invalid Input
@@ -49,7 +49,7 @@ states:
   - name: Validate Selected Option
     type: switch
     dataConditions:
-      - condition: '${ . as $root | any($root.options[]; . == ((($root.llm_response.choices // [])[0].message.content // "") | trim)) }'
+      - condition: '${ . as $root | any($root.options[]; . == (($root.llm_response.choices // [])[0].message.content // "")) }'
         transition: Return Selected Option
     defaultCondition:
       transition: Invalid Model Answer
@@ -58,7 +58,7 @@ states:
     type: inject
     data:
       valid: true
-      selected_option: '${ (.llm_response.choices[0].message.content // "") | trim }'
+      selected_option: '${ .llm_response.choices[0].message.content // "" }'
     end: true
 
   - name: Invalid Input
