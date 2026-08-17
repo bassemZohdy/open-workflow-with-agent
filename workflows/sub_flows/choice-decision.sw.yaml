@@ -18,7 +18,7 @@ states:
   - name: Validate Input
     type: switch
     dataConditions:
-      - condition: '${ (.question // "") | type == "string" and ((.question // "") | trim | length > 0) and ((.options // []) | type == "array") and ((.options // []) | length > 0) and all(.options[]; type == "string") }'
+      - condition: '${ . as $root | (($root.question // "") | type == "string") and (($root.question // "") | trim | length > 0) and (($root.options // []) | type == "array") and (($root.options // []) | length > 0) and all($root.options[]; type == "string") }'
         transition: Ask Choice Question
     defaultCondition:
       transition: Invalid Input

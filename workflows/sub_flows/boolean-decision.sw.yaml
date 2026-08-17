@@ -18,7 +18,7 @@ states:
   - name: Validate Input
     type: switch
     dataConditions:
-      - condition: '${ (.question // "") | type == "string" and ((.question // "") | trim | length > 0) }'
+      - condition: '${ . as $root | (($root.question // "") | type == "string") and (($root.question // "") | trim | length > 0) }'
         transition: Ask Boolean Question
     defaultCondition:
       transition: Invalid Input
