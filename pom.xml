@@ -21,9 +21,10 @@
          HIGH CVEs. The BOM imports below are declared BEFORE quarkus-bom so they win
          Maven's first-import-wins conflict resolution and lift the whole artifact
          families to the exact advisory floors (netty >= 4.1.136: CVE-2026-56819 and
-         others; jackson >= 2.21.4: CVE-2026-54512/54513, GHSA-r7wm-3cxj-wff9). -->
+         others; jackson >= 2.21.5: CVE-2026-54512/54513, GHSA-r7wm-3cxj-wff9,
+         CVE-2026-54515, CVE-2026-59889, GHSA-mhm7-754m-9p8w). -->
     <netty.bom.version>4.1.136.Final</netty.bom.version>
-    <jackson.bom.version>2.21.4</jackson.bom.version>
+    <jackson.bom.version>2.21.5</jackson.bom.version>
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>3.0.0-M7</version.surefire.plugin>
@@ -61,6 +62,14 @@
         <version>${kogito.bom.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- Rhino 1.7.7.2 (transitive via swagger-parser -> json-schema-validator ->
+           json-schema-core, used for JS schema validation) has CVE-2025-66453 (LOW).
+           1.8.1 is API-compatible; override the Kogito-managed version. -->
+      <dependency>
+        <groupId>org.mozilla</groupId>
+        <artifactId>rhino</artifactId>
+        <version>1.8.1</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

@@ -1,7 +1,8 @@
 # OpenWorkflow Reference Implementation — Task Tracker
 
 The scope reduction to an orchestrator-only implementation (LLM catalog call + generic
-agent call, sync/async) is **complete, merged to `main`, and pushed**. This file now
+agent call, sync/async) is **complete, merged to `main`, and pushed**. The CI security
+backlog and the spec-first restructure are also complete (2026-08-17). This file now
 tracks (1) the completed work for the record and (2) the remaining backlog with full
 context so any session can pick it up cold.
 
@@ -40,52 +41,104 @@ context so any session can pick it up cold.
 
 ---
 
+## Completed: CI security backlog + spec-first restructure (2026-08-17)
+
+### Security-scan (Trivy) CI job — fixed (was HIGH priority)
+
+Root cause found in the CI log: `trivy-action@v0.36.0` with `format: sarif` **unsets the
+severity filter** for SARIF output ("Building SARIF report with all severities") unless
+`limit-severities-for-sarif: true` is set — so `exit-code: 1` fired on the 7 MEDIUM/LOW
+findings. Secondary: the action defaulted to Trivy **0.70.0** while 0.74.0 (locally
+verified) reports 0 findings at HIGH/CRITICAL.
+
+Fixes (`.github/workflows/ci.yml`, `trivy.yaml`, `pom.xml`):
+
+- [x] `limit-severities-for-sarif: true` — SARIF + exit code now gated on HIGH,CRITICAL
+- [x] `version: v0.74.0` — pin the Trivy binary to the locally verified version
+- [x] `skip-version-check: true` in `trivy.yaml` (silences the version notice)
+- [x] jackson-bom 2.21.4 → **2.21.5** — removes 3 of the 7 open alerts
+      (GHSA-mhm7-754m-9p8w, CVE-2026-59889, CVE-2026-54515)
+- [x] `org.mozilla:rhino` override **1.7.7.2 → 1.8.1** in `<dependencyManagement>`
+      (transitive via swagger-parser → json-schema-core; CVE-2025-66453 LOW) — tests 20/20
+- [x] `trivy.yaml` committed with documented `ignore` entries (id + `expired_at` 2027-06-30
+      + reason) for the Kogito/Quarkus-pinned MEDIUMs that cannot be fixed on this platform
+      line: CVE-2026-42333, CVE-2026-40180 (quarkus-openapi-generator 2.11.0-lts),
+      CVE-2026-45292 (opentelemetry-api 1.44.1) — re-evaluate on the next platform upgrade
+- [x] Verified locally with Trivy 0.74.0: HIGH/CRITICAL scan exits 0; the remaining
+      MEDIUM/LOW findings are suppressed only via the documented ignores
+
+The 7 existing GitHub code-scanning alerts should auto-close after the next green run
+uploads a SARIF without them (verify via `gh api .../code-scanning/alerts?state=open`).
+
+### gitleaks + OWASP steps — first-ever execution (was HIGH priority)
+
+- [x] gitleaks-action **v2.3.9 → v3.0.0** (Node 24 runtime). Verified locally with the
+      action's bundled gitleaks **8.24.3** (and 8.30.1): `no leaks found` across all 35
+      commits — the intentional test fixtures (`test-secret-123`, `e2e-test-key`,
+      `dummy-key`, `replace-with-a-secret`) are NOT matched by default rules, so **no
+      `.gitleaksignore` was needed**
+- [x] OWASP dependency-check step is now **gated on the `NVD_API_KEY` repo secret**
+      (`if: env.NVD_API_KEY != ''`): without the key the NVD API rate-limits and the step
+      hangs/fails spuriously. Add the secret in repo Settings → Secrets and variables →
+      Actions to enable it (blocking on CVSS >= 7). Has never run — see "Remaining".
+
+### CI modernization (was LOW priority)
+
+- [x] `github/codeql-action/upload-sarif@v3` → **@v4** (v3 deprecated Dec 2026)
+- [x] `actions/upload-artifact@v4` → **@v7** (Node 24 runtime), both jobs
+- [x] `actions/setup-node@v4` → **@v7** (Node 24 runtime), e2e job
+- [x] `gitleaks-action` v2.3.9 → v3.0.0 (see above)
+- [x] Trivy version notice silenced via `trivy.yaml` (see above)
+
+### Spec-first restructure: the OpenWorkflow YAML/JSON specs are the main project (2026-08-17)
+
+The deliverable is the spec package; Java is only the reference runner. Restructured to
+make that structural, not just documented:
+
+- [x] Canonical spec package moved from `src/main/resources/` to a top-level **`workflows/`**
+      (`llm-chat.sw.yaml`, `agent-call.sw.yaml`, `sub_flows/`, `catalogs/`) — the repo
+      layout now *shows* spec-first
+- [x] Discovered hard constraint: the Kogito codegen scans **only**
+      `<module>/src/main/resources` for `*.sw.yaml` (AppPaths hardcodes it; the Maven
+      `<resources>` model is NOT consulted — verified by bytecode inspection and by the
+      404s a pure `<resources>` move produced). The runner therefore keeps a **generated
+      mirror** there, byte-identical to `workflows/`
+- [x] **`deploy/sync-runner-resources.sh`** — copies `workflows/` → `src/main/resources/`;
+      `--check` mode fails on drift; wired into the CI `validate-deployment` job
+- [x] **`deploy/generate-sonataflow.sh`** — regenerates `deploy/sonataflow.yaml`'s inline
+      `spec.flow` from `workflows/agent-call.sw.yaml` (the CR previously carried a
+      hand-mirrored copy with zero sync guard — 273 diff lines of silent drift);
+      `--check` mode wired into CI. Embedded flow verified byte-identical (4872/4872 chars)
+- [x] `deploy/kustomization.yaml` configMap now sources `../workflows/` and documents why
+      `agent-call.sw.yaml` is embedded in the CR rather than mounted
+- [x] README gained a "Repository Layout: Specs First, Runner Second" section; all docs
+      links updated to `workflows/`
+- [x] Dockerfile no longer needs `COPY workflows` (the mirror ships in the jar)
+- [x] e2e webServer: POSIX env-prefix command → Playwright `env` option (the old form
+      could not start the app on Windows cmd); added `@types/node` to e2e devDependencies
+- [x] Verified: `mvn clean test` 20/20, `mvn package`, kustomize render, both sync checks,
+      e2e 6/6 — all green locally
+
+### Cleanup (was LOW priority)
+
+- [x] Merged `feature/reduce-to-llm-and-agent-call` branch: already deleted (local +
+      remote) — nothing to do
+- [ ] Optional: parallelize async tests now that `DISPATCH_STATUSES` is per-instance
+      (currently sequential; not a bottleneck at 5 tests) — deliberately left
+
+---
+
 ## Remaining tasks
 
-### 1. Finish the security-scan (Trivy) CI job — HIGH priority
+### 1. OWASP dependency-check has never run — MEDIUM priority (needs repo secret)
 
-Current state: 4 of 5 CI jobs pass on `main` (test/package, manifests, container, e2e);
-the security job's Trivy step still exits 1 even though only MEDIUM/LOW findings remain
-(GitHub Security tab shows 7 open alerts, all < HIGH, despite `severity: HIGH,CRITICAL`).
+The step is in place and gated on the `NVD_API_KEY` secret; it will only execute once the
+secret exists. First run will tell us whether `-DfailBuildOnCVSS=7` passes on this
+dependency set (expect it to: Trivy shows nothing >= HIGH). If it flags CVSS >= 7
+findings that Trivy's DB does not cover, suppress with the plugin's `suppression.xml`
+(same documentation discipline as `trivy.yaml`) — do NOT weaken the CVSS threshold.
 
-Remaining findings (from `gh api repos/…/code-scanning/alerts?state=open`):
-
-| Package | Installed | Finding(s) | Fixed in | Suggested action |
-| :--- | :--- | :--- | :--- | :--- |
-| `com.fasterxml.jackson.core:jackson-databind` | 2.21.4 | GHSA-mhm7-754m-9p8w, CVE-2026-59889, CVE-2026-54515 (MEDIUM) | **2.21.5** | Bump `jackson.bom.version` in `pom.xml` — trivial, removes 3 of 7 |
-| `org.mozilla:rhino` (Kogito transitive) | 1.7.7.2 | CVE-2025-66453 (LOW) | 1.8.1 | Override via `<dependencyManagement>` entry in `pom.xml` |
-| `io.quarkiverse.openapi.generator:quarkus-openapi-generator` | 2.11.0-lts | CVE-2026-42333, CVE-2026-40180 (MEDIUM) | 2.16.0-lts / 2.17.0 | Pinned by Kogito 10.2 — prefer documented suppression (see below) over override |
-| `io.opentelemetry:opentelemetry-api` | 1.44.1 | CVE-2026-45292 (MEDIUM) | 1.62.0 | Managed by Quarkus/Kogito — prefer documented suppression |
-
-Notes from local reproduction (2026-08-16): Trivy **0.74.0** with the same filters
-(`--scanners vuln,secret --severity HIGH,CRITICAL`) reports **0 findings** on this repo;
-CI runs Trivy **0.70.0** via the action and exits 1. Suspects, in order:
-1. Version behavior difference — pin the action's Trivy to a current release by adding
-   `version: v0.74.0` (or latest) to the `aquasecurity/trivy-action` step in
-   `.github/workflows/ci.yml`.
-2. `exit-code: '1'` firing on the unfiltered finding set under SARIF format.
-3. For the Kogito/Quarkus-pinned MEDIUMs, add a committed `trivy.yaml` at repo root with
-   documented `ignore` entries (CVE id + expiry + reason) rather than weakening filters.
-
-### 2. First-ever execution of gitleaks + OWASP steps — HIGH priority (unknown risk)
-
-The security job has never gotten past Trivy, so these steps have **never run**:
-- **gitleaks** (`gitleaks/gitleaks-action@v2.3.9`): may flag the intentional test fixtures
-  (`test-secret-123`, `e2e-test-key`, `dummy-key`, `replace-with-a-secret`). If it does,
-  add a `.gitleaksignore` with those exact findings (they are documented placeholders,
-  not live secrets).
-- **OWASP dependency-check** (blocking on CVSS >= 7): needs the `NVD_API_KEY` repo secret;
-  without it the NVD API rate-limits and the step can fail/time out. Either add the secret
-  (repo Settings → Secrets → Actions) or gate the step on its presence.
-
-### 3. CI modernization / deprecation warnings — LOW priority
-
-- `github/codeql-action/upload-sarif@v3` is deprecated (Dec 2026) → bump to `@v4`.
-- Node 20 deprecation warnings from `actions/upload-artifact@v4`, `actions/setup-node@v4`
-  (informational; resolve as actions publish Node 24 builds).
-- Consider `--skip-version-check` for Trivy to silence the version notice in logs.
-
-### 4. OpenShift / Knative callback smoke test — MEDIUM priority (needs a cluster)
+### 2. OpenShift / Knative callback smoke test — MEDIUM priority (needs a cluster)
 
 The async `agent_call` callback path is verified locally only over the `quarkus-http`
 channel. On OpenShift Serverless Logic, callback states resume via Knative Eventing
@@ -93,22 +146,27 @@ brokers instead. The event contract is identical (type `agent_response`, `kogito
 = workflow instance id — see `docs/02-agent-rest-call.md`), but it has never been exercised
 against a real cluster. Requires: an OpenShift cluster with Serverless Logic + Eventing,
 `deploy/` applied via kustomize, an agent reachable at `AGENT_BASE_URL` implementing
-`catalogs/agent-rest.yaml`.
+`workflows/catalogs/agent-rest.yaml`. Also verify there that the `classpath:/catalogs/...`
+URIs resolve against the mounted workflow resources (the `workflow-uri-definitions`
+extension) — untested on the platform.
 
-### 5. Cleanup — LOW priority
+### 3. Optional cleanup
 
-- Delete the merged `feature/reduce-to-llm-and-agent-call` branch (local + remote).
-- Optional: parallelize async tests now that `DISPATCH_STATUSES` is per-instance
-  (currently sequential; not a bottleneck at 5 tests).
+- Parallelize async tests (`DISPATCH_STATUSES` is per-instance since `4b1f67e`) when the
+  suite grows.
 
 ---
 
-## Verification results (2026-08-16, after CVE pass 1)
+## Verification results (2026-08-17, after CI security fixes + spec-first restructure)
 
 - `mvn clean test` — 20/20 passed (AgentCallTest 5, LlmChatWorkflowTest 3,
   ApiKeyAuthFilterTest 8, RateLimitFilterTest 2, DecisionSubflowContractTest 2)
 - `mvn package -DskipTests` — success
 - `kubectl kustomize deploy --load-restrictor LoadRestrictionsNone` — valid
-- `e2e: npx playwright test` — 6/6 passed
-- `docker compose config` (dummy secrets) — valid
-- Local Trivy 0.74.0 (`--scanners vuln,secret --severity HIGH,CRITICAL`) — 0 findings
+- `./deploy/generate-sonataflow.sh --check` — OK (spec.flow byte-identical to
+  workflows/agent-call.sw.yaml)
+- `./deploy/sync-runner-resources.sh --check` — OK (src/main/resources mirrors workflows/)
+- e2e: `npx playwright test` — 6/6 passed (Windows + CI-ready webServer config)
+- Trivy 0.74.0 (`--scanners vuln,secret --severity HIGH,CRITICAL`) — 0 findings;
+  full-severity scan shows only the 3 documented `trivy.yaml` suppressions
+- gitleaks 8.24.3 (action-bundled version) — `no leaks found` over all 35 commits

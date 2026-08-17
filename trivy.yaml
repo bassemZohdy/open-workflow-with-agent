@@ -1,0 +1,33 @@
+# Trivy configuration for the repository-wide filesystem scan (CI security job).
+#
+# Documented suppressions for CVEs that this repository cannot fix on its own:
+# the affected artifacts are transitive dependencies whose versions are pinned
+# by the Kogito 10.2 / Quarkus 3.27 platform BOMs, and the patched versions are
+# not compatible with that platform line. Revisit each entry at the expiry date
+# or on the next platform upgrade (whichever comes first) and remove it once
+# the platform manages a patched version.
+#
+# Note: the CI scan gates on HIGH/CRITICAL only (`limit-severities-for-sarif`),
+# so these MEDIUM suppressions document accepted risk as much as scan hygiene.
+
+# Silence the "a newer Trivy version is available" notice in CI logs.
+skip-version-check: true
+
+ignore:
+  - id: CVE-2026-42333
+    expired_at: 2027-06-30
+    reason: >-
+      quarkus-openapi-generator 2.11.0-lts is pinned by the Kogito 10.2 BOM;
+      fixed in 2.16.0-lts/2.17.0, not compatible with the Quarkus 3.27 line
+      this project is locked to
+  - id: CVE-2026-40180
+    expired_at: 2027-06-30
+    reason: >-
+      quarkus-openapi-generator 2.11.0-lts is pinned by the Kogito 10.2 BOM;
+      fixed in 2.16.0-lts/2.17.0, not compatible with the Quarkus 3.27 line
+      this project is locked to
+  - id: CVE-2026-45292
+    expired_at: 2027-06-30
+    reason: >-
+      opentelemetry-api 1.44.1 is managed by the Quarkus 3.27 / Kogito 10.2
+      BOM; fixed in 1.62.0, not compatible with that platform line

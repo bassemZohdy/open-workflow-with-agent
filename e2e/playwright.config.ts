@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { defineConfig, devices } from '@playwright/test';
 
 // The E2E suite runs against the packaged Quarkus app (prod profile). Playwright starts it
@@ -27,8 +28,14 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: `UTILITY_API_KEY=${apiKey} UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE=0 java -jar target/quarkus-app/quarkus-run.jar`,
+          command: 'java -jar target/quarkus-app/quarkus-run.jar',
           cwd: '..',
+          // env passed explicitly (not a shell prefix) so the same config works on
+          // Windows cmd, POSIX shells, and CI runners alike.
+          env: {
+            UTILITY_API_KEY: apiKey,
+            UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE: '0',
+          },
           url: `${baseURL}/q/health`,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
