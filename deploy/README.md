@@ -46,9 +46,9 @@ oc apply -f deploy/openai-credentials.yaml -n "$NAMESPACE"
 > Do not commit populated `openai-credentials.yaml` secrets to version control.
 
 Notes:
-- `UTILITY_API_KEY` is **required** by the `%prod` profile (the app refuses to start without it) - generate one with `openssl rand -hex 24`.
-- `AGENT_BASE_URL` must point at an agent implementing the two operations in [`agent-rest.yaml`](../workflows/catalogs/agent-rest.yaml). This repo's bundled mock agent (`AgentResource`, same container) implements them; on the platform it is typically an external service.
-- When `OPENAI_BASE_URL` points at a LiteLLM proxy, provision a **scoped virtual key** (model allowlist + budget cap) via LiteLLM's `/key/generate` endpoint and use that as `OPENAI_API_KEY` - never the proxy's master key, which carries key-management/spend privileges (see the `litellm-keygen` service in `docker-compose.yml` for the same pattern).
+* `UTILITY_API_KEY` is **required** by the `%prod` profile (the app refuses to start without it) - generate one with `openssl rand -hex 24`.
+* `AGENT_BASE_URL` must point at an agent implementing the two operations in [`agent-rest.yaml`](../workflows/catalogs/agent-rest.yaml). This repo's bundled mock agent (`AgentResource`, same container) implements them; on the platform it is typically an external service.
+* When `OPENAI_BASE_URL` points at a LiteLLM proxy, provision a **scoped virtual key** (model allowlist + budget cap) via LiteLLM's `/key/generate` endpoint and use that as `OPENAI_API_KEY` - never the proxy's master key, which carries key-management/spend privileges (see the `litellm-keygen` service in `docker-compose.yml` for the same pattern).
 
 ---
 

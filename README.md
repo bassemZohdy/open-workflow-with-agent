@@ -125,10 +125,12 @@ extensions:
 ## Running Locally
 
 ### Prerequisites
+
 * JDK 17+
 * Apache Maven 3.9+
 
 ### Environment Setup
+
 The application is provider-agnostic: the LLM is called through a generic OpenAI-compatible `/v1/chat/completions` endpoint, the agent through its generic REST API. Both are configured via environment variables:
 
 ```bash
@@ -141,6 +143,7 @@ export OPENAI_API_KEY=your-openai-key
 For a self-contained local stack (LiteLLM in front of Ollama, PostgreSQL) with no external account needed, use `docker compose` instead - see [`docs/13-docker-and-compose.md`](docs/13-docker-and-compose.md). Copy [`.env.example`](.env.example) to `.env` and fill in the **required** secrets (`POSTGRES_PASSWORD`, `LITELLM_MASTER_KEY`, `UTILITY_API_KEY`) - compose fails fast if any is unset. The stack binds every port to `127.0.0.1`, pins all image tags, and provisions a **scoped LiteLLM virtual key** (model allowlist + budget cap) for the application, so it never authenticates to the proxy with the master key.
 
 #### Securing the endpoints
+
 By default every endpoint (`/agent/*`, the workflow entry points, the debug console) is open - fine for local development, not for anything reachable beyond localhost. Two knobs:
 
 | Variable | Effect when set |
@@ -202,6 +205,7 @@ mvn clean test
 ```
 
 The test suite covers:
+
 * [`LlmChatWorkflowTest`](src/test/java/org/acme/functions/LlmChatWorkflowTest.java): end-to-end coverage of `llm_chat` using [`OpenAiMockApiResource`](src/test/java/org/acme/functions/OpenAiMockApiResource.java) - completion flow, bearer-token regression, entry-point guardrail rejection, and provider HTTP-error mapping.
 * [`AgentCallTest`](src/test/java/org/acme/functions/AgentCallTest.java): sync/async `agent_call` coverage against the bundled mock agent - sync response flow, input validation, agent HTTP-error mapping, and the full async round-trip (fire -> suspension -> `agent_response` CloudEvent -> resume).
 * [`DecisionSubflowContractTest`](src/test/java/org/acme/functions/DecisionSubflowContractTest.java): Contract coverage for strict boolean and constrained-choice subflow inputs, outputs, and invalid-answer handling.

@@ -21,10 +21,10 @@ tmp="$(mktemp)"
 
 # Header: everything in the committed CR up to (excluding) the '  flow:' key.
 # Footer: everything from the '  podTemplate:' key onward.
-awk '/^  flow:/{exit} {print}' "$cr_file" | sed 's/\r$//' > "$tmp"
-printf '  flow:\n' >> "$tmp"
-sed 's/\r$//' "$flow_file" | awk '{print "    " $0}' >> "$tmp"
-awk '/^  podTemplate:/{p=1} p{print}' "$cr_file" | sed 's/\r$//' >> "$tmp"
+awk '/^  flow:/{exit} {print}' "$cr_file" | sed 's/\r$//' >"$tmp"
+printf '  flow:\n' >>"$tmp"
+sed 's/\r$//' "$flow_file" | awk '{print "    " $0}' >>"$tmp"
+awk '/^  podTemplate:/{p=1} p{print}' "$cr_file" | sed 's/\r$//' >>"$tmp"
 
 if diff -q <(sed 's/\r$//' "$cr_file") "$tmp" >/dev/null 2>&1; then
     rm -f "$tmp"
