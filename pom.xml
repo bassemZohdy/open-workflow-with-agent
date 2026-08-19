@@ -13,7 +13,7 @@
     <quarkus-plugin.version>3.27.5.1</quarkus-plugin.version>
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.27.5.1</quarkus.platform.version>
+    <quarkus.platform.version>3.39.0</quarkus.platform.version>
     <kogito.bom.version>10.2.0</kogito.bom.version>
     <sonataflow.version>10.2.0</sonataflow.version>
     <!-- Security floors: Kogito 10.2 pins us to the Quarkus 3.27 line, whose managed
