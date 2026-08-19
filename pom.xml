@@ -10,7 +10,7 @@
   <description>Production-ready reference implementation for extending the OpenWorkflow specification with native Agentic AI capabilities</description>
 
   <properties>
-    <quarkus-plugin.version>3.27.5.1</quarkus-plugin.version>
+    <quarkus-plugin.version>3.39.0</quarkus-plugin.version>
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.version>3.27.5.1</quarkus.platform.version>
