@@ -16,11 +16,12 @@ OpenShift Serverless Logic cluster is not required for the project gate.
 
 ### OWASP dependency-check verification
 
-The repository `NVD_API_KEY` secret is configured. The CI workflow now passes it to OWASP
-Dependency-Check through `nvdApiKeyEnvironmentVariable=NVD_API_KEY`, which avoids exposing
-the secret as a Maven command-line value.
+The CI workflow passes the repository `NVD_API_KEY` secret to OWASP Dependency-Check through
+`nvdApiKeyEnvironmentVariable=NVD_API_KEY`, which avoids exposing the secret as a Maven
+command-line value. CI has confirmed the wiring, but NVD rejected the currently configured
+key as invalid.
 
-- [ ] Push the workflow configuration and rerun CI.
+- [ ] Replace `NVD_API_KEY` with a valid, activated NVD API key and rerun CI.
 - [ ] Confirm the OWASP scan completes and passes with `-DfailBuildOnCVSS=7`.
 - [ ] If CVSS >= 7 findings appear, remediate them or add narrowly scoped, documented
       suppressions; never lower the threshold.
