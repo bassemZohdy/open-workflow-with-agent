@@ -2,6 +2,11 @@
 
 This deployment runs the **orchestrator-only OpenWorkflow reference implementation** on OpenShift Serverless Logic (SonataFlow engine version 10.2.0 GitOps profile).
 
+This package is the platform deployment target, not the required local acceptance
+environment. The repository's Maven and Playwright suites validate the same workflows with
+the plain Quarkus/SonataFlow runner; use an OpenShift/Knative cluster for optional
+platform-specific smoke testing when one is available.
+
 ---
 
 ## Deployment Architecture

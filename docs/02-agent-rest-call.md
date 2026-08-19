@@ -95,6 +95,11 @@ mp.messaging.incoming.agent_response.path=/agent/response-event
 On OpenShift Serverless Logic the same event arrives through the platform's Knative Eventing
 broker - the workflow YAML is identical, only the platform config differs.
 
+The required project acceptance path uses the plain Quarkus/SonataFlow runner and its
+`quarkus-http` channel. OpenShift/Knative delivery is an optional platform-specific smoke
+test when a Serverless Logic environment is available; it is not required for the local
+workflow contract tests.
+
 The quarkus-http ingress is protected by the application's Vert.x HTTP security filter
 because it is not a Jakarta REST resource and therefore does not pass through the normal
 JAX-RS API-key filter. Callback targets are validated for scheme, length, DNS resolution,

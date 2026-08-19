@@ -223,9 +223,13 @@ The test suite covers:
 * [`ApiKeyAuthFilterTest`](src/test/java/org/acme/functions/ApiKeyAuthFilterTest.java): Verifies the `UTILITY_API_KEY` gate behaves correctly when enabled, never blocks `/q/*` management endpoints, and blocks traversal/encoded/double-slash path variants.
 * [`RateLimitFilterTest`](src/test/java/org/acme/functions/RateLimitFilterTest.java): Verifies the `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` gate behaves correctly when enabled and never blocks `/q/*` management endpoints.
 
-CI runs the Maven suite, packages the application, validates the Kubernetes/OpenShift Kustomize package, builds the Docker image, runs the Playwright E2E suite, and blocks on Trivy/gitleaks/OWASP dependency-check security scans. Test reports are uploaded as workflow artifacts when available.
+CI runs the Maven suite, packages the application, validates the Kubernetes/OpenShift Kustomize package, builds the Docker image, runs the Playwright E2E suite, and blocks on Trivy, gitleaks, and OWASP Dependency-Check security scans. The OWASP job reads the repository `NVD_API_KEY` secret through the plugin's `nvdApiKeyEnvironmentVariable` setting and blocks on CVSS >= 7. Test reports are uploaded as workflow artifacts when available.
 
-> The OWASP dependency-check job requires an `NVD_API_KEY` repository secret; without it the job can be rate-limited or fail.
+> If `NVD_API_KEY` is unavailable (for example, in a fork), the OWASP step is skipped with a warning because the NVD API may rate-limit unauthenticated requests.
+
+The required acceptance environment is the plain Quarkus/SonataFlow runner. OpenShift
+Serverless Logic deployment packaging is maintained separately; a live OpenShift/Knative
+cluster is not required to validate the workflows in this repository.
 
 ---
 

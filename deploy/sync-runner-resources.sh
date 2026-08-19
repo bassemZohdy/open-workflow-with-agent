@@ -40,11 +40,13 @@ if [ "$check_mode" = "--check" ]; then
     src_listing="$(mktemp)"
     dst_listing="$(mktemp)"
     trap 'rm -f "$src_listing" "$dst_listing"' EXIT
-    (cd "$src_dir" && find . -type f -printf '%P\n' | sort) >"$src_listing"
+    # Use only portable find options here: macOS ships BSD find, which does not
+    # support GNU find's -printf used by the CI runner's GNU find.
+    (cd "$src_dir" && find . -type f | sed 's#^\./##' | sort) >"$src_listing"
     # The runner resource directory also contains application.properties and the debug
     # console. Compare the generated workflow/catalog package only, by excluding those
     # intentional runner-only files from the destination listing.
-    (cd "$dst_dir" && find . -type f -printf '%P\n' | sort) \
+    (cd "$dst_dir" && find . -type f | sed 's#^\./##' | sort) \
         | grep -E '(^|/)([^/]+\.sw\.yaml|catalogs/[^/]+\.yaml)$' >"$dst_listing" || true
     missing="$(comm -23 "$src_listing" "$dst_listing")"
     extra="$(comm -13 "$src_listing" "$dst_listing")"

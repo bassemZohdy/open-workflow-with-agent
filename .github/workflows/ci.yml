@@ -207,6 +207,7 @@ jobs:
           mvn --batch-mode --no-transfer-progress
           org.owasp:dependency-check-maven:13.0.0:check -DskipTests
           -DfailBuildOnCVSS=7
+          -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
 
       - name: Report skipped OWASP dependency-check
         if: env.NVD_API_KEY == ''
