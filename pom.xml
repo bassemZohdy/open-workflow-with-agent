@@ -24,7 +24,7 @@
          others; jackson >= 2.21.5: CVE-2026-54512/54513, GHSA-r7wm-3cxj-wff9,
          CVE-2026-54515, CVE-2026-59889, GHSA-mhm7-754m-9p8w). -->
     <netty.bom.version>4.1.136.Final</netty.bom.version>
-    <jackson.bom.version>2.21.5</jackson.bom.version>
+    <jackson.bom.version>2.22.2</jackson.bom.version>
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>3.5.5</version.surefire.plugin>
