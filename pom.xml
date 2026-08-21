@@ -30,7 +30,7 @@
     <version.surefire.plugin>3.5.5</version.surefire.plugin>
     <version.resources.plugin>3.4.0</version.resources.plugin>
     <version.antrun.plugin>3.1.0</version.antrun.plugin>
-    <studio.frontend.plugin.version>1.15.4</studio.frontend.plugin.version>
+    <studio.frontend.plugin.version>2.0.2</studio.frontend.plugin.version>
     <studio.node.version>v24.18.0</studio.node.version>
     <studio.npm.version>11.6.2</studio.npm.version>
     <studio.validation.rule-set>studio-validation-2026-08-20.1</studio.validation.rule-set>
