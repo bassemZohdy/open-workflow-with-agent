@@ -28,7 +28,7 @@
     <maven.compiler.release>17</maven.compiler.release>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>3.5.5</version.surefire.plugin>
-    <version.resources.plugin>3.4.0</version.resources.plugin>
+    <version.resources.plugin>3.5.0</version.resources.plugin>
     <version.antrun.plugin>3.1.0</version.antrun.plugin>
     <studio.frontend.plugin.version>1.15.4</studio.frontend.plugin.version>
     <studio.node.version>v24.18.0</studio.node.version>
