@@ -24,6 +24,40 @@ This project provides a **minimal reference implementation** for **OpenWorkflow*
 | **Agent Call (Async)** | Fire-and-continue `callback` state; instance suspends and resumes on the agent's `agent_response` CloudEvent (correlated via `kogitoprocrefid`) | [`agent-call.sw.yaml`](workflows/agent-call.sw.yaml) | [`agent-rest.yaml`](workflows/catalogs/agent-rest.yaml) |
 | **Decision Subflows** | Strict typed AI decisions (yes/no, or one value from an option list) | [`boolean-decision.sw.yaml`](workflows/sub_flows/boolean-decision.sw.yaml), [`choice-decision.sw.yaml`](workflows/sub_flows/choice-decision.sw.yaml) | [`openai-compatible.yaml`](workflows/catalogs/openai-compatible.yaml) |
 
+### OpenWorkflow Studio
+
+The repository also includes a browser-based Studio at `/studio/` for inspecting and
+authoring the canonical `workflows/` package. The existing execution console remains at
+`/` while Studio execution and runtime-validation panels are still being completed.
+
+| Capability | Current behavior | Details |
+| :--- | :--- | :--- |
+| Browse and search | Available | Workflows, reusable subflows, and local OpenAPI catalogs are listed with metadata, diagnostics, and generated-sync status. |
+| Source, form, and graph editing | Available for the supported profile | Drafts preserve unknown fields; supported edits are source-preserving and show save diffs. |
+| Validation | Available | Local syntax, workflow 0.8, OpenAPI 3.x, semantic, dependency-scope, JSON, and SARIF diagnostics are available without remote schema fetching. |
+| Catalog and subflow authoring | Available | Local operation binding, dependency impact review, subflow contracts, cycle detection, and guarded linear extraction are supported. |
+| Persistent writes | Explicit opt-in | Set `STUDIO_WRITE_ENABLED=true`; production/custom profiles are read-only by default and mutations require the utility API key. |
+| Execution and runtime validation | Not yet in Studio | Use the root console or the documented workflow endpoints until STUDIO-403 and STUDIO-404 are complete. |
+
+#### Studio quick start
+
+For the packaged application, run `mvn clean package` and start the generated Quarkus
+artifact. For development, `mvn quarkus:dev` serves the root console and Studio together;
+the frontend-only development server is available with `npm run dev:studio` after `npm ci`.
+Open `http://localhost:8080/studio/`. Development and test profiles enable Studio writes;
+packaged/custom profiles require an explicit `STUDIO_WRITE_ENABLED=true` override. See the
+[Studio API and persistence guide](docs/studio/04-workspace-api-and-persistence.md) before
+mounting a writable workspace.
+
+The first supported authoring dialect is Serverless Workflow 0.8 YAML as executed by the
+repository's SonataFlow 10.2 / Quarkus 3.27 runner. Local OpenAPI 3.x catalogs are supported;
+Open Workflow 1.x documents open in compatibility-protected source mode. Remote catalog
+imports, arbitrary filesystem access, Git mutation, and Studio-side execution are not first-
+release capabilities. See the [Studio documentation index](docs/README.md), the
+[runtime capability profile](docs/studio/06-runtime-capability-profile.md), and the
+[frontend/build architecture decision](docs/studio/02-frontend-and-build-architecture-dar.md)
+for detailed constraints and contributor setup.
+
 ---
 
 ## Architecture Overview
@@ -161,6 +195,10 @@ By default every endpoint (`/agent/*`, the workflow entry points, the debug cons
 | :--- | :--- |
 | `UTILITY_API_KEY` | Requires `Authorization: Bearer <key>` on every request except `/q/*` management endpoints |
 | `UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE` | Caps total request throughput (a global, not per-client, fixed 60s window) |
+| `STUDIO_WRITE_ENABLED` | Enables Studio create/update/rename/delete/restore operations; disabled by default outside dev/test |
+| `STUDIO_ALLOWED_ORIGINS` | Optional comma-separated browser origins allowed for cross-origin Studio mutations |
+| `STUDIO_RUNTIME_VALIDATION_ENABLED` | Enables the read-only bundled SonataFlow parser boundary; disabled by default outside dev/test |
+| `STUDIO_RUNTIME_VALIDATION_TIMEOUT` / `STUDIO_RUNTIME_VALIDATION_MAX_CONCURRENCY` / `STUDIO_RUNTIME_VALIDATION_MAX_OUTPUT_BYTES` | Bounds runtime validation duration, parallel work, and diagnostic output |
 
 Both default to disabled in dev/test so the curl examples, debug console, and tests below keep working unchanged. In the **`%prod` profile** (what the container image and OpenShift Serverless Logic run) the defaults are flipped: `UTILITY_API_KEY` is **required** - the application refuses to start without it ([`ProdSecurityDefaults`](src/main/java/org/acme/functions/ProdSecurityDefaults.java)) - and a 600 req/min rate cap applies unless overridden. The `docker compose` stack enforces the same via required `.env` variables. Set both before exposing this service beyond your own machine.
 

@@ -34,6 +34,7 @@ export default defineConfig({
           // Windows cmd, POSIX shells, and CI runners alike.
           env: {
             UTILITY_API_KEY: apiKey,
+            STUDIO_WRITE_ENABLED: "true",
             UTILITY_RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
             AGENT_CALLBACK_ALLOWED_HOSTS: "localhost,127.0.0.1,::1",
           },

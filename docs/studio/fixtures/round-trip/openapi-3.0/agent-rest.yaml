@@ -1,0 +1,111 @@
+openapi: 3.0.3
+info:
+  title: Agent REST API Catalog
+  version: '1.0.0'
+  description: >-
+    Minimal generic REST contract for invoking an external agent. The agent is a black
+    box: this catalog only defines how the workflow invokes it and (for the asynchronous
+    mode) how the agent reports completion. Point AGENT_BASE_URL at any agent that
+    implements these two operations - the agent's internals (tools, MCP, A2A, ...) are
+    deliberately out of scope for the workflow side.
+servers:
+  - url: /
+paths:
+  /agent/sync:
+    post:
+      operationId: agentSyncCall
+      summary: Invoke the agent and wait for its HTTP response
+      description: >-
+        Synchronous agent invocation: the workflow blocks until the agent answers.
+        The request body is {"payload": {...}} where payload is an opaque JSON object
+        forwarded verbatim by the workflow (the agent defines its own payload schema);
+        the HTTP response body becomes the workflow's agent_response output.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSyncRequest'
+      responses:
+        '200':
+          description: Agent response (opaque JSON object)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Agent rejected the request
+        '500':
+          description: Unexpected agent failure
+  /agent/async:
+    post:
+      operationId: agentAsyncCall
+      summary: Fire an asynchronous agent request; the response arrives later as a CloudEvent
+      description: >-
+        Asynchronous agent invocation: the agent accepts the request (202) and performs
+        the work later. When done, it POSTs a completion event back to callback_url -
+        a structured CloudEvent (content-type application/cloudevents+json) with
+        type "agent_response", the extension attribute "kogitoprocrefid" set to
+        workflow_instance_id (required so SonataFlow can correlate the event with the
+        suspended workflow instance), and the agent's response payload in "data".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentAsyncRequest'
+      responses:
+        '202':
+          description: Request accepted; completion event will follow on the callback URL
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Agent rejected the request
+        '500':
+          description: Unexpected agent failure
+      callbacks:
+        agentResponse:
+          '{$request.body#/callback_url}':
+            post:
+              summary: Completion event posted by the agent when the work is done
+              requestBody:
+                required: true
+                content:
+                  application/cloudevents+json:
+                    schema:
+                      type: object
+                      additionalProperties: true
+              responses:
+                '200':
+                  description: Event accepted; the suspended workflow resumes
+components:
+  schemas:
+    AgentSyncRequest:
+      type: object
+      required: [payload]
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+          description: Opaque request payload for the agent (agent-defined schema).
+    AgentAsyncRequest:
+      type: object
+      required: [callback_url, workflow_instance_id]
+      properties:
+        callback_url:
+          type: string
+          description: URL the agent POSTs the agent_response CloudEvent to when done.
+        workflow_instance_id:
+          type: string
+          description: >-
+            Id of the calling workflow instance. The agent MUST return it as the
+            "kogitoprocrefid" CloudEvent extension attribute on the completion event
+            so the event is correlated with the right suspended instance.
+        payload:
+          type: object
+          additionalProperties: true
+          description: Opaque request payload for the agent (agent-defined schema).

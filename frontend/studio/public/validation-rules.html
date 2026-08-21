@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenWorkflow Studio validation rules</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          16px/1.55 system-ui,
+          sans-serif;
+      }
+      body {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 32px;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+      }
+      section {
+        border-top: 1px solid #8886;
+        padding: 16px 0;
+      }
+      .severity {
+        font-size: 0.8em;
+        opacity: 0.75;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p>OpenWorkflow Studio · deterministic local validation</p>
+      <h1>Validation rule reference</h1>
+      <p>
+        Rules describe source shape and workspace relationships without evaluating user expressions
+        or executing workflow side effects. Errors are not suppressible; warnings and informational
+        compatibility findings may be suppressed by an approved project policy once suppression
+        support is enabled.
+      </p>
+
+      <section id="studio.workflow.duplicate-id">
+        <h2>
+          <code>studio.workflow.duplicate-id</code> <span class="severity">error · semantic</span>
+        </h2>
+        <p>Workflow IDs must be unique across the workspace.</p>
+      </section>
+      <section id="studio.workflow.duplicate-state">
+        <h2>
+          <code>studio.workflow.duplicate-state</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>State names must be unique within a workflow.</p>
+      </section>
+      <section id="studio.workflow.start-reference">
+        <h2>
+          <code>studio.workflow.start-reference</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>The declared start state must exist.</p>
+      </section>
+      <section id="studio.workflow.transition-reference">
+        <h2>
+          <code>studio.workflow.transition-reference</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>Every transition target must name a declared state.</p>
+      </section>
+      <section id="studio.workflow.dead-end">
+        <h2>
+          <code>studio.workflow.dead-end</code> <span class="severity">error · semantic</span>
+        </h2>
+        <p>A non-terminal state must have a normal or explicitly supported outcome.</p>
+      </section>
+      <section id="studio.workflow.self-loop">
+        <h2>
+          <code>studio.workflow.self-loop</code> <span class="severity">error · semantic</span>
+        </h2>
+        <p>
+          Accidental direct self-loops are rejected; use an intentional bounded loop construct when
+          required.
+        </p>
+      </section>
+      <section id="studio.workflow.unreachable-state">
+        <h2>
+          <code>studio.workflow.unreachable-state</code>
+          <span class="severity">warning · semantic</span>
+        </h2>
+        <p>The state is not reachable from the declared start path.</p>
+      </section>
+      <section id="studio.workflow.switch-default">
+        <h2>
+          <code>studio.workflow.switch-default</code>
+          <span class="severity">warning · semantic</span>
+        </h2>
+        <p>Switch states should define an explicit default outcome for unmatched input.</p>
+      </section>
+      <section id="studio.workflow.unreachable-branch">
+        <h2>
+          <code>studio.workflow.unreachable-branch</code>
+          <span class="severity">warning · semantic</span>
+        </h2>
+        <p>An unconditional branch makes later switch branches unreachable.</p>
+      </section>
+      <section id="studio.workflow.callback-event-correlation">
+        <h2>
+          <code>studio.workflow.callback-event-correlation</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>Callback states need an event reference for runtime correlation.</p>
+      </section>
+      <section id="studio.workflow.unresolved-function">
+        <h2>
+          <code>studio.workflow.unresolved-function</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>A functionRef points at a function not declared in the workflow.</p>
+      </section>
+      <section id="studio.workflow.catalog-alias">
+        <h2>
+          <code>studio.workflow.catalog-alias</code> <span class="severity">error · semantic</span>
+        </h2>
+        <p>A function operation uses an undeclared catalog alias.</p>
+      </section>
+      <section id="studio.workflow.operation-unresolved">
+        <h2>
+          <code>studio.workflow.operation-unresolved</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>The referenced operationId is absent from the resolved local catalog.</p>
+      </section>
+      <section id="studio.workflow.subflow-unresolved">
+        <h2>
+          <code>studio.workflow.subflow-unresolved</code>
+          <span class="severity">error · semantic</span>
+        </h2>
+        <p>A subflow reference does not resolve to a local workflow ID or path.</p>
+      </section>
+      <section id="studio.workflow.unknown-extension">
+        <h2>
+          <code>studio.workflow.unknown-extension</code>
+          <span class="severity">warning · compatibility</span>
+        </h2>
+        <p>The extension is preserved but is not interpreted by the local validator.</p>
+      </section>
+      <section id="studio.workflow.expression-shape">
+        <h2>
+          <code>studio.workflow.expression-shape</code> <span class="severity">error · schema</span>
+        </h2>
+        <p>Expression-bearing fields must remain authored, non-empty text.</p>
+      </section>
+      <section id="studio.openapi.unresolved-ref">
+        <h2>
+          <code>studio.openapi.unresolved-ref</code> <span class="severity">error · semantic</span>
+        </h2>
+        <p>A local OpenAPI JSON pointer cannot be resolved.</p>
+      </section>
+      <section id="studio.openapi.external-ref">
+        <h2>
+          <code>studio.openapi.external-ref</code> <span class="severity">warning · semantic</span>
+        </h2>
+        <p>
+          External references are reported as unresolved-by-policy and are never fetched by Studio.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

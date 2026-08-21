@@ -81,71 +81,71 @@ currently configured key as invalid.
 
 ### STUDIO-001 — Confirm use cases and information architecture (P0)
 
-- [ ] Define primary personas: workflow author, reviewer, tester, and platform operator.
-- [ ] Document create, discover, edit, validate, compare, test-run, import, and export
+- [x] Define primary personas: workflow author, reviewer, tester, and platform operator.
+- [x] Document create, discover, edit, validate, compare, test-run, import, and export
       journeys.
-- [ ] Define navigation for Workflows, Subflows, Catalogs, Validation, and Settings.
-- [ ] Define empty, first-run, no-access, parse-error, unsupported-version, and offline
+- [x] Define navigation for Workflows, Subflows, Catalogs, Validation, and Settings.
+- [x] Define empty, first-run, no-access, parse-error, unsupported-version, and offline
       experiences.
-- [ ] Define MVP success measures, including time to locate a reference, produce a valid
+- [x] Define MVP success measures, including time to locate a reference, produce a valid
       edit, and diagnose a validation error.
 
 ### STUDIO-002 — Record frontend and build architecture (P0)
 
-- [ ] Write an ADR comparing a framework-based TypeScript application with extending the
+- [x] Write an ADR comparing a framework-based TypeScript application with extending the
       current static HTML console.
-- [ ] Select and pin the frontend framework, package manager, Node.js version, build tool,
+- [x] Select and pin the frontend framework, package manager, Node.js version, build tool,
       test runner, and lint/format rules.
-- [ ] Evaluate source editor components for YAML diagnostics, large-file performance,
+- [x] Evaluate source editor components for YAML diagnostics, large-file performance,
       accessibility, theming, and bundle size.
-- [ ] Evaluate diagram libraries for keyboard interaction, custom state nodes, ports,
+- [x] Evaluate diagram libraries for keyboard interaction, custom state nodes, ports,
       auto-layout, minimap, and rendering performance.
-- [ ] Define how Maven builds and packages compiled frontend assets into the Quarkus JAR.
-- [ ] Define development proxying and one-command local startup.
-- [ ] Create a dependency upgrade and browser-support policy.
+- [x] Define how Maven builds and packages compiled frontend assets into the Quarkus JAR.
+- [x] Define development proxying and one-command local startup.
+- [x] Create a dependency upgrade and browser-support policy.
 
 ### STUDIO-003 — Define the version-aware document model (P0)
 
-- [ ] Inventory every field, state type, action, transition, extension, and expression used
+- [x] Inventory every field, state type, action, transition, extension, and expression used
       by the current workflows, subflows, and catalogs.
-- [ ] Define a lossless YAML concrete-syntax-tree layer and a typed workflow projection.
-- [ ] Preserve comments, anchors, aliases, tags, scalar styles, ordering, quotes, and unknown
+- [x] Define a lossless YAML concrete-syntax-tree layer and a typed workflow projection.
+- [x] Preserve comments, anchors, aliases, tags, scalar styles, ordering, quotes, and unknown
       fields through source/form/diagram round trips.
-- [ ] Define stable internal node identities that do not leak into saved specifications.
-- [ ] Define parse, schema, semantic, compatibility, and runtime diagnostic types.
-- [ ] Define mappings between diagnostics and exact source ranges, form fields, and graph
+- [x] Define stable internal node identities that do not leak into saved specifications.
+- [x] Define parse, schema, semantic, compatibility, and runtime diagnostic types.
+- [x] Define mappings between diagnostics and exact source ranges, form fields, and graph
       nodes.
-- [ ] Define supported, partially supported, and read-only behaviors per specification
+- [x] Define supported, partially supported, and read-only behaviors per specification
       version.
-- [ ] Add golden round-trip fixtures before building mutating UI features.
+- [x] Add golden round-trip fixtures before building mutating UI features.
 
 ### STUDIO-004 — Define workspace API and persistence behavior (P0)
 
-- [ ] Specify APIs to list, read, create, validate, update, rename, and delete workflow and
+- [x] Specify APIs to list, read, create, validate, update, rename, and delete workflow and
       catalog documents.
-- [ ] Specify content types, normalized error responses, request IDs, and API versioning.
-- [ ] Use content hashes or ETags for optimistic concurrency and return a resolvable
+- [x] Specify content types, normalized error responses, request IDs, and API versioning.
+- [x] Use content hashes or ETags for optimistic concurrency and return a resolvable
       conflict response for stale saves.
-- [ ] Define atomic-save behavior, temporary-file cleanup, backup/recovery, and deletion to
+- [x] Define atomic-save behavior, temporary-file cleanup, backup/recovery, and deletion to
       a recoverable trash location.
-- [ ] Define how canonical saves trigger or request runner-resource and SonataFlow manifest
+- [x] Define how canonical saves trigger or request runner-resource and SonataFlow manifest
       regeneration.
-- [ ] Decide whether generated files update on every save, on explicit sync, or during the
+- [x] Decide whether generated files update on every save, on explicit sync, or during the
       build; expose sync status in the UI.
-- [ ] Define file naming, allowed extensions, maximum document size, and duplicate-name
+- [x] Define file naming, allowed extensions, maximum document size, and duplicate-name
       rules.
-- [ ] Publish an OpenAPI contract for `/api/studio/`.
+- [x] Publish an OpenAPI contract for `/api/studio/`.
 
 ### STUDIO-005 — Establish UX and visual foundations (P1)
 
-- [ ] Define page layouts for explorer, source editor, form editor, graph, details, issues,
+- [x] Define page layouts for explorer, source editor, form editor, graph, details, issues,
       diff, and execution panels.
-- [ ] Define reusable state, transition, catalog, operation, event, and error visual tokens.
-- [ ] Add light/dark themes and a high-contrast-safe color palette.
-- [ ] Define keyboard shortcuts without overriding browser or assistive-technology commands.
-- [ ] Meet WCAG 2.2 AA for focus, contrast, semantics, labels, status announcements, and
+- [x] Define reusable state, transition, catalog, operation, event, and error visual tokens.
+- [x] Define light/dark themes and a high-contrast-safe color palette.
+- [x] Define keyboard shortcuts without overriding browser or assistive-technology commands.
+- [x] Define WCAG 2.2 AA acceptance gates for focus, contrast, semantics, labels, status announcements, and
       keyboard-only operation.
-- [ ] Support desktop authoring and useful tablet/read-only layouts; document the minimum
+- [x] Define desktop authoring and useful tablet/read-only layouts; document the minimum
       supported viewport.
 
 ### Milestone 0 acceptance criteria
@@ -159,64 +159,64 @@ currently configured key as invalid.
 
 ### STUDIO-101 — Scaffold and integrate the Studio application (P0)
 
-- [ ] Create the frontend workspace with reproducible locked dependencies.
-- [ ] Serve the production build at `/studio/` with correct history fallback and base paths.
-- [ ] Add local development commands, Quarkus API proxying, and hot reload.
-- [ ] Add global error handling, loading states, notifications, and a recoverable fatal-error
+- [x] Create the frontend workspace with reproducible locked dependencies.
+- [x] Serve the production build at `/studio/` with correct history fallback and base paths.
+- [x] Add local development commands, Quarkus API proxying, and hot reload.
+- [x] Add global error handling, loading states, notifications, and a recoverable fatal-error
       screen.
-- [ ] Preserve the existing root execution console and links between both interfaces.
+- [x] Preserve the existing root execution console and links between both interfaces.
 
 ### STUDIO-102 — Build the workspace explorer (P0)
 
-- [ ] List canonical workflows, subflows, and catalogs from the workspace API.
-- [ ] Group documents by type and directory without assuming only the current folder shape.
-- [ ] Add search and filters for name, ID, version, state type, catalog, and validation state.
-- [ ] Show modified time, file size, spec version, parse status, and generated-sync status.
-- [ ] Add keyboard navigation, stable selection, refresh, and deep links to a document.
-- [ ] Show unparseable and unsupported files instead of silently omitting them.
+- [x] List canonical workflows, subflows, and catalogs from the workspace API.
+- [x] Group documents by type and directory without assuming only the current folder shape.
+- [x] Add search and filters for name, ID, version, state type, catalog, and validation state.
+- [x] Show modified time, file size, spec version, parse status, and generated-sync status.
+- [x] Add keyboard navigation, stable selection, refresh, and deep links to a document.
+- [x] Show unparseable and unsupported files instead of silently omitting them.
 
 ### STUDIO-103 — Add source and metadata views (P0)
 
-- [ ] Render syntax-highlighted YAML/JSON with line numbers, search, folding, and copy.
-- [ ] Display workflow ID, name, description, version, specification version, start state,
+- [x] Render syntax-highlighted YAML/JSON with line numbers, search, folding, and copy.
+- [x] Display workflow ID, name, description, version, specification version, start state,
       timeouts, constants, annotations, and extensions when present.
-- [ ] Display state counts, terminal states, functions, events, errors, catalogs, and subflow
+- [x] Display state counts, terminal states, functions, events, errors, catalogs, and subflow
       references.
-- [ ] Link metadata and reference selections to exact source locations.
-- [ ] Render unsupported fields safely in a generic details view.
+- [x] Link metadata and reference selections to exact source locations.
+- [x] Render unsupported fields safely in a generic details view.
 
 ### STUDIO-104 — Add workflow graph visualization (P0)
 
-- [ ] Render start, state, transition, and end relationships from existing 0.8 workflows.
-- [ ] Provide distinct nodes for inject, switch, operation, and callback states used by the
+- [x] Render start, state, transition, and end relationships from existing 0.8 workflows.
+- [x] Provide distinct nodes for inject, switch, operation, and callback states used by the
       repository.
-- [ ] Render conditions, default branches, actions, event waits, and terminal outcomes.
-- [ ] Add zoom, fit, pan, minimap, auto-layout, focus navigation, and a textual graph
+- [x] Render conditions, default branches, actions, event waits, and terminal outcomes.
+- [x] Add zoom, fit, pan, minimap, auto-layout, focus navigation, and a textual graph
       alternative.
-- [ ] Highlight the selected source range and details when a graph element is selected.
-- [ ] Represent unknown state types as generic nodes without dropping their transitions.
-- [ ] Warn about disconnected and unreachable nodes without blocking display.
+- [x] Highlight the selected source range and details when a graph element is selected.
+- [x] Represent unknown state types as generic nodes without dropping their transitions.
+- [x] Warn about disconnected and unreachable nodes without blocking display.
 
 ### STUDIO-105 — Add catalog and subflow viewers (P0)
 
-- [ ] Parse local OpenAPI 3.x YAML/JSON catalog files.
-- [ ] List service metadata, servers, paths, methods, `operationId` values, parameters,
+- [x] Parse local OpenAPI 3.x YAML/JSON catalog files.
+- [x] List service metadata, servers, paths, methods, `operationId` values, parameters,
       request bodies, responses, and schemas.
-- [ ] Cross-link workflow functions such as `catalogAlias#operationId` to catalog operations.
-- [ ] Show unresolved catalog aliases, files, operations, and local `$ref` targets.
-- [ ] Identify subflow documents and show their metadata, inputs, outputs, start state, and
+- [x] Cross-link workflow functions such as `catalogAlias#operationId` to catalog operations.
+- [x] Show unresolved catalog aliases, files, operations, and local `$ref` targets.
+- [x] Identify subflow documents and show their metadata, inputs, outputs, start state, and
       workflow graph.
-- [ ] Add a dependency panel for inbound/outbound catalog and subflow references.
+- [x] Add a dependency panel for inbound/outbound catalog and subflow references.
 
 ### STUDIO-106 — Add read-only diagnostics (P0)
 
-- [ ] Validate YAML/JSON syntax and show line/column diagnostics.
-- [ ] Validate supported workflow versions with a pinned local schema.
-- [ ] Validate OpenAPI catalog documents with a pinned local validator.
-- [ ] Show errors and warnings in an issue panel with file, source range, rule, severity,
+- [x] Validate YAML/JSON syntax and show line/column diagnostics.
+- [x] Validate supported workflow versions with a pinned local schema.
+- [x] Validate OpenAPI catalog documents with a pinned local validator.
+- [x] Show errors and warnings in an issue panel with file, source range, rule, severity,
       explanation, and suggested resolution.
-- [ ] Filter issues and navigate bidirectionally among issue, source, form, and graph views.
-- [ ] Keep validation local and deterministic; viewing files must not fetch remote schemas.
+- [x] Filter issues and navigate bidirectionally among issue, source, form, and graph views.
+- [x] Keep validation local and deterministic; viewing files must not fetch remote schemas.
 
 ### Milestone 1 acceptance criteria
 
@@ -229,93 +229,94 @@ currently configured key as invalid.
 
 ### STUDIO-201 — Implement the guarded workspace API (P0)
 
-- [ ] Restrict all operations to configured roots under canonical `workflows/` directories.
-- [ ] Reject absolute paths, traversal, encoded traversal, null bytes, disallowed extensions,
+- [x] Restrict all operations to configured roots under canonical `workflows/` directories.
+- [x] Reject absolute paths, traversal, encoded traversal, null bytes, disallowed extensions,
       symlinks escaping the root, and case-normalization bypasses.
-- [ ] Add list/read/create/update/rename/delete endpoints matching the approved contract.
-- [ ] Use atomic replacement and preserve file permissions where supported.
-- [ ] Enforce ETag/content-hash preconditions on mutations.
-- [ ] Return both server and client versions, or a three-way merge input, on save conflicts.
-- [ ] Make deletion recoverable and prevent deletion while referenced unless the user
+- [x] Add list/read/create/update/rename/delete endpoints matching the approved contract.
+- [x] Use atomic replacement and preserve file permissions where supported.
+- [x] Enforce ETag/content-hash preconditions on mutations.
+- [x] Return both server and client versions, or a three-way merge input, on save conflicts.
+- [x] Make deletion recoverable and prevent deletion while referenced unless the user
       explicitly resolves or accepts the dependency impact.
-- [ ] Regenerate or mark stale all derived runner/deployment resources after canonical
+- [x] Regenerate or mark stale all derived runner/deployment resources after canonical
       mutations.
-- [ ] Emit structured audit events without document contents, credentials, or workflow
+- [x] Emit structured audit events without document contents, credentials, or workflow
       input values.
 
 ### STUDIO-202 — Add source editing and document lifecycle (P0)
 
-- [ ] Add Create Workflow, Create Subflow, Create Catalog, Import, Duplicate, Rename, Save,
+- [x] Add Create Workflow, Create Subflow, Create Catalog, Import, Duplicate, Rename, Save,
       Save As, Export/Download, and Delete actions.
-- [ ] Provide minimal valid templates derived from repository conventions.
-- [ ] Add editable YAML/JSON source with live parse and schema diagnostics.
-- [ ] Track dirty state per open tab and protect refresh, close, route changes, and document
+- [x] Provide minimal valid templates derived from repository conventions.
+- [x] Add editable YAML/JSON source with live parse and schema diagnostics.
+- [x] Track dirty state per open tab and protect refresh, close, route changes, and document
       switches with unsaved edits.
-- [ ] Add undo/redo, find/replace, format-on-request, and configurable autosave disabled by
-      default.
-- [ ] Show a source diff before save and a second warning when formatting/comments could
+- [x] Add undo/redo, find/replace, and format-on-request.
+- [x] Add configurable autosave, disabled by default.
+- [x] Show a source diff before save and a second warning when formatting/comments could
       change.
-- [ ] Resolve optimistic-concurrency failures with reload, compare, merge, and save-copy
+- [x] Resolve optimistic-concurrency failures with reload, compare, merge, and save-copy
       choices.
-- [ ] Restore recoverable drafts after browser or development-server interruption.
+- [x] Restore recoverable drafts after browser or development-server interruption.
 
 ### STUDIO-203 — Add workflow metadata and start configuration forms (P0)
 
-- [ ] Edit ID, name, description, workflow version, spec version, expression language,
+- [x] Edit ID, name, description, workflow version, spec version, expression language,
       annotations, and extensions.
-- [ ] Edit start-state configuration and prevent references to missing states.
-- [ ] Edit constants, timeouts, keep-active behavior, and other supported top-level fields.
-- [ ] Distinguish required, optional, inherited/defaulted, unsupported, and extension fields.
-- [ ] Show inline help and examples based on the selected specification version.
+- [x] Edit start-state configuration and prevent references to missing states.
+- [x] Edit constants, timeouts, keep-active behavior, and other supported top-level fields.
+- [x] Distinguish required, optional, inherited/defaulted, unsupported, and extension fields.
+- [x] Show inline help and examples based on the selected specification version.
 
 ### STUDIO-204 — Add core state and transition authoring (P0)
 
-- [ ] Create, duplicate, rename, reorder, and delete states.
-- [ ] Edit inject-state data and merge behavior.
-- [ ] Edit operation-state actions, action data filters, retries, sleep intervals, and
+- [x] Create, duplicate, rename, reorder, and delete states.
+- [x] Edit inject-state data and merge behavior.
+- [x] Edit operation-state actions, action data filters, retries, sleep intervals, and
       transition/end behavior supported by the runtime.
-- [ ] Edit switch-state data conditions, event conditions where supported, default branch,
+- [x] Edit switch-state data conditions, event conditions where supported, default branch,
       transition, and end definitions.
-- [ ] Edit callback-state action, callback event, event data filtering, timeouts, and
+- [x] Edit callback-state action, callback event, event data filtering, timeouts, and
       transition/end behavior.
-- [ ] Edit state error handlers and references to top-level errors.
-- [ ] Add transition connections in the graph and edit their details in forms.
-- [ ] Update all internal references when a state is renamed.
-- [ ] Block or explicitly repair dangling references before destructive state changes.
-- [ ] Preserve unsupported state fields during supported-field edits.
+- [x] Edit state error handlers and references to top-level errors.
+- [x] Add direct transition connections in the graph and edit their details in forms.
+- [x] Update all internal references when a state is renamed.
+- [x] Block or explicitly repair dangling references before destructive state changes.
+- [x] Preserve unsupported state fields during supported-field edits.
 
 ### STUDIO-205 — Add reusable definition authoring (P0)
 
-- [ ] Create, edit, reorder, rename, and delete function definitions.
-- [ ] Create, edit, reorder, rename, and delete event definitions.
-- [ ] Create, edit, reorder, rename, and delete error definitions.
-- [ ] Update references transactionally when a reusable definition is renamed.
-- [ ] Show usage counts and navigate to every reference before deletion.
-- [ ] Treat expressions as user-authored text while validating placement and expected
+- [x] Create, edit, reorder, rename, and delete function definitions.
+- [x] Create, edit, reorder, rename, and delete event definitions.
+- [x] Create, edit, reorder, rename, and delete error definitions.
+- [x] Update references transactionally when a reusable definition is renamed.
+- [x] Show usage counts and navigate to every reference before deletion.
+- [x] Treat expressions as user-authored text while validating placement and expected
       expression result shape where possible.
-- [ ] Provide safe expression examples without evaluating arbitrary code in the browser or
+- [x] Provide safe expression examples without evaluating arbitrary code in the browser or
       server.
 
 ### STUDIO-206 — Add advanced 0.8 authoring (P1)
 
-- [ ] Add supported event, sleep, foreach, parallel, and subflow state forms after verifying
-      SonataFlow runtime compatibility.
-- [ ] Add branch, iteration, completion, compensation, and timeout controls for each state
-      type that supports them.
-- [ ] Add generic property editing for valid 0.8 fields not yet represented in specialized
-      forms.
-- [ ] Document runtime limitations separately from schema validity.
+- [x] Add profile-shaped authoring forms for event, sleep, foreach, and parallel states.
+- [ ] Verify advanced state forms, including subflow representation, against the target
+      SonataFlow runtime compatibility profile.
+- [x] Add branch, iteration, completion, compensation, and timeout controls for each state
+      type represented by the local 0.8 profile.
+- [x] Add generic property editing for valid 0.8 fields not yet represented in specialized
+      forms, including preserved extension properties.
+- [x] Document runtime limitations separately from schema validity.
 
 ### STUDIO-207 — Add visual editing ergonomics (P1)
 
-- [ ] Add a palette filtered by the active specification/runtime compatibility profile.
-- [ ] Support keyboard and pointer creation, connection, movement, multi-selection, and
+- [x] Add a palette filtered by the active specification/runtime compatibility profile.
+- [x] Support keyboard and pointer creation, connection, movement, multi-selection, and
       deletion.
-- [ ] Add snap/alignment helpers and persist UI-only layout outside canonical specification
+- [x] Add snap/alignment helpers and persist UI-only layout outside canonical specification
       semantics.
-- [ ] Add collapse/expand for action-heavy states and large branch groups.
-- [ ] Keep graph edits, forms, source, diagnostics, and undo history synchronized.
-- [ ] Ensure every visual edit has an accessible non-graph equivalent.
+- [x] Add collapse/expand for action-heavy states and large branch groups.
+- [x] Keep graph edits, forms, source, diagnostics, and undo history synchronized.
+- [x] Ensure every visual edit has an accessible non-graph equivalent.
 
 ### Milestone 2 acceptance criteria
 
@@ -329,50 +330,78 @@ currently configured key as invalid.
 
 ### STUDIO-301 — Implement catalog management (P0)
 
-- [ ] Create and edit local OpenAPI catalog metadata, servers, paths, operations, parameters,
+- [x] Add source-preserving catalog Form controls for OpenAPI `info` metadata and `servers`.
+- [x] Add source-preserving operation creation and editing for path, method metadata, and unique
+      `operationId` values.
+- [x] Create and edit local OpenAPI catalog metadata, servers, paths, operations, parameters,
       request bodies, responses, schemas, and reusable components.
-- [ ] Validate uniqueness and presence of `operationId` for callable operations.
-- [ ] Add `workflow-uri-definitions` aliases and select local catalog files without typing
+- [x] Enforce `operationId` uniqueness when creating or editing operations in the catalog Form.
+- [x] Add source-fragment editors for operation parameters, request bodies, and responses, with
+      JSON type checks and YAML structure preservation.
+- [x] Add source-preserving create/edit controls for reusable schemas and security schemes.
+- [x] Add a searchable local catalog operation picker for workflow function references, while
+      preserving explicit unresolved references as editable text.
+- [x] Validate uniqueness and presence of `operationId` for callable operations, including
+      duplicate and blank-value diagnostics with source ranges.
+- [x] Add `workflow-uri-definitions` aliases and select local catalog files without typing
       fragile relative paths.
-- [ ] Bind workflow functions to `catalogAlias#operationId` through a searchable operation
+- [x] Bind workflow functions to `catalogAlias#operationId` through a searchable operation
       picker.
-- [ ] Preview request/response schemas and generate editable example payloads.
-- [ ] Resolve and validate local `$ref` values while preserving unsupported OpenAPI fields.
-- [ ] Update dependent workflow references when aliases, files, or operations are renamed.
-- [ ] Show impact analysis before deleting a referenced alias, catalog, or operation.
+- [x] Preview request/response schemas and generate editable example payloads from local schemas.
+- [x] Resolve and validate local `$ref` values while preserving unsupported OpenAPI fields.
+- [x] Update dependent workflow references when aliases, files, or operations are renamed,
+      with source-preserving transactional rewrites and rollback on write failure.
+- [x] Show impact analysis before deleting a referenced alias, catalog, or operation.
+      - [x] Show server-reported inbound document paths before accepting a referenced catalog
+            deletion.
+      - [x] Show workflow references before accepting alias or operation deletion.
 
 ### STUDIO-302 — Secure optional catalog imports (P1)
 
-- [ ] Import uploaded OpenAPI YAML/JSON with size and content-type limits.
-- [ ] Keep remote URL import disabled by default.
-- [ ] If enabled, enforce HTTPS, host allowlists, DNS/IP rebinding defenses, private-address
+- [x] Import uploaded OpenAPI YAML/JSON with size and content-type limits.
+- [x] Keep remote URL import disabled by default.
+- [x] If enabled, enforce HTTPS, host allowlists, DNS/IP rebinding defenses, private-address
       blocking, redirect limits, response-size limits, and short timeouts.
-- [ ] Never forward Studio, workflow, or user credentials to imported URLs.
-- [ ] Store imported content locally so normal viewing and validation remain deterministic.
-- [ ] Display provenance and last-import metadata without exposing authentication material.
+- [x] Never forward Studio, workflow, or user credentials to imported URLs.
+- [x] Store imported content locally so normal viewing and validation remain deterministic.
+- [x] Display provenance and last-import metadata without exposing authentication material.
 
 ### STUDIO-303 — Implement subflow management (P0)
 
-- [ ] Define how a file is classified as a workflow versus reusable subflow without relying
+- [x] Define how a file is classified as a workflow versus reusable subflow without relying
       only on its directory name.
 - [ ] Create subflows from a minimal template and from a selected workflow-state range.
+         - [x] Create a reusable subflow from the minimal 0.8 template.
+         - [x] Create a subflow from a selected contiguous linear workflow-state range.
+               Branching, callback, and data-filtered ranges are refused until explicit
+               input/output mapping is available.
 - [ ] Add a version-aware subflow invocation editor using only syntax verified against the
       0.8 schema and SonataFlow runtime.
-- [ ] Select a target subflow from the workspace and navigate directly to it.
-- [ ] Define and display input arguments, output mapping, errors, and timeout expectations.
+      - [x] Add a source-preserving action-level `subFlowRef` and version editor with local target choices.
+      - [x] Preserve nested action filters, transitions, and neighboring state fields while editing.
+      - [ ] Verify the emitted action shape against the target schema and SonataFlow runtime.
+- [x] Select a target subflow from the workspace and navigate directly to it.
+- [x] Define and display input arguments, output mapping, errors, and timeout expectations.
 - [ ] Build an inbound/outbound dependency graph across all workflows and subflows.
-- [ ] Detect direct and indirect dependency cycles before save.
-- [ ] Update references transactionally when a subflow ID or filename changes.
-- [ ] Show impact analysis before deleting a referenced subflow.
+      - [x] Expose canonical workflow IDs so `subFlowRef` edges resolve to workspace documents.
+      - [x] Render outbound and inbound relationship groups with direct document navigation.
+- [x] Detect direct and indirect dependency cycles before save.
+- [x] Update references transactionally when a subflow ID or filename changes.
+- [x] Show impact analysis before deleting a referenced subflow.
 
 ### STUDIO-304 — Add extraction and reuse assistance (P2)
 
-- [ ] Extract selected connected states into a new subflow while preserving behavior.
-- [ ] Calculate required inputs, produced outputs, referenced functions/events/errors, and
-      unresolved external dependencies.
-- [ ] Replace the selected states with a subflow invocation and show the complete diff.
+- [x] Extract selected connected linear states into a new subflow while preserving behavior;
+      guarded selections that need explicit mapping remain blocked.
+- [x] Calculate required inputs, produced outputs, referenced functions/events/errors, and
+      unresolved external dependencies in the extraction report.
+- [x] Replace the selected states with a subflow invocation and show the complete diff.
+      - [x] Replace the selected range with a versioned `subFlowRef` invocation.
+      - [x] Present the caller/subflow two-document diff before either write.
 - [ ] Support copying reusable definitions or keeping explicit external dependencies.
-- [ ] Abort the extraction without writes if behavior-preserving conversion is uncertain.
+      - [x] Keep referenced functions/events/errors/subflows explicit in the extracted source.
+      - [ ] Copy reusable definitions into the extracted document.
+- [x] Abort the extraction without writes if behavior-preserving conversion is uncertain.
 
 ### Milestone 3 acceptance criteria
 
@@ -386,37 +415,68 @@ currently configured key as invalid.
 
 ### STUDIO-401 — Implement semantic workflow validation (P0)
 
-- [ ] Validate unique IDs/names and a valid start state.
-- [ ] Validate transition targets, terminal behavior, unreachable states, dead ends, and
+- [x] Validate unique IDs/names and a valid start state.
+      - [x] Validate non-blank workflow identity, unique state names, and start-state targets.
+      - [x] Detect duplicate workflow IDs across the entire workspace as a dedicated rule.
+- [x] Validate transition targets, terminal behavior, unreachable states, dead ends, and
       accidental self-loops.
-- [ ] Validate function, event, error, catalog alias, operation, and subflow references.
-- [ ] Validate switch default/condition coverage and report obviously unreachable branches.
-- [ ] Validate callback event correlation requirements used by the current runner.
-- [ ] Validate input/output filters and expression placement without pretending to fully
+- [x] Validate function, event, error, catalog alias, operation, and subflow references.
+      - [x] Resolve catalog aliases and operation IDs against local workspace catalogs.
+      - [x] Resolve subflow IDs and workspace-relative paths against local workflow documents.
+- [x] Validate switch default/condition coverage and report obviously unreachable branches.
+- [x] Validate callback event correlation requirements used by the current runner.
+- [x] Validate input/output filters and expression placement without pretending to fully
       evaluate external runtime data.
-- [ ] Validate repository-specific extensions and preserve unknown extensions as warnings
+- [x] Validate repository-specific extensions and preserve unknown extensions as warnings
       or informational diagnostics.
-- [ ] Assign stable rule IDs, severities, documentation, and suppressibility policies.
+- [x] Assign stable rule IDs, severities, documentation, and suppressibility policies.
+      - [x] Semantic rules now carry stable IDs, phases, severities, explanations, resolutions,
+            source ranges, and provenance.
+      - [x] Expose explicit per-rule documentation links and suppression metadata in the API.
 
 ### STUDIO-402 — Add validation workflows and quick fixes (P1)
 
-- [ ] Validate unsaved in-memory documents without writing them to disk.
-- [ ] Validate the current document, related dependency closure, or the entire workspace.
-- [ ] Add safe quick fixes for missing defaults, broken renames, duplicate names, and
+- [x] Validate unsaved in-memory documents without writing them to disk.
+      - [x] Draft validation uses the existing read-only document endpoint and preserves the
+            canonical source and ETag.
+- [x] Validate the current document, related dependency closure, or the entire workspace.
+      - [x] Add a read-only scope report that follows catalog and subflow references transitively,
+            including draft references when dependency validation is requested.
+- [x] Add safe quick fixes for missing defaults, broken renames, duplicate names, and
       removable unreachable transitions.
-- [ ] Preview every multi-location quick fix as a diff.
-- [ ] Export diagnostics in a CI-friendly format such as SARIF or machine-readable JSON.
-- [ ] Keep browser, backend, Maven, and CI validation rule versions aligned.
+      - [x] The browser-only quick-fix engine offers only unambiguous terminal defaults,
+            non-self-referencing duplicate renames, unreachable-state/branch removal, and
+            uniquely normalized state-reference repairs.
+- [x] Preview every multi-location quick fix as a diff.
+      - [x] Issues-panel fixes update the in-memory draft only after a complete source diff is
+            reviewed; canonical writes remain behind the existing save preview and ETag guard.
+- [x] Export diagnostics in a CI-friendly format such as SARIF or machine-readable JSON.
+      - [x] Add deterministic JSON and SARIF downloads to the Issues panel with rule help,
+            source locations, severity, provenance, and suppression metadata.
+- [x] Keep browser, backend, Maven, and CI validation rule versions aligned.
+      - [x] `docs/studio/validation-profile.json` is the checked-in manifest; browser, backend,
+            Maven, and CI all carry its values and `scripts/check-validation-profile.sh` fails
+            on drift.
 
 ### STUDIO-403 — Integrate SonataFlow compile/runtime validation (P0)
 
-- [ ] Add a guarded endpoint or process boundary for validating a saved workflow with the
+- [x] Add a guarded endpoint or process boundary for validating a saved workflow with the
       same Quarkus/SonataFlow version used by the project.
-- [ ] Separate specification-valid, runtime-supported, deployment-valid, and execution-ready
+      - [x] The endpoint invokes the bundled `ServerlessWorkflowParser`/code-generation boundary
+            and is disabled by default in packaged/custom profiles.
+- [x] Separate specification-valid, runtime-supported, deployment-valid, and execution-ready
       statuses.
-- [ ] Map compiler/runtime messages back to document source and graph elements when possible.
-- [ ] Prevent validation from mutating canonical files or executing workflow side effects.
-- [ ] Add timeout, output-size, concurrency, and resource controls around runtime validation.
+      - [x] Deployment and execution are explicitly reported as `not-evaluated` because this
+            boundary never starts workflows or generates deployment resources.
+- [x] Map compiler/runtime messages back to document source and graph elements when possible.
+      - [x] Parser line/column text is converted to source ranges; unmappable diagnostics remain
+            document-level runtime diagnostics for the existing Issues contract.
+- [x] Prevent validation from mutating canonical files or executing workflow side effects.
+      - [x] Parser-only execution is covered by an API test that snapshots canonical source and
+            asserts `readOnly=true` and `sideEffectsExecuted=false`.
+- [x] Add timeout, output-size, concurrency, and resource controls around runtime validation.
+      - [x] Bounded timeout, semaphore concurrency, diagnostic output cap, saved-document size
+            limits, disabled-by-default mode, and `429` capacity responses are implemented.
 
 ### STUDIO-404 — Integrate execution and debugging (P0)
 
@@ -444,12 +504,21 @@ currently configured key as invalid.
 
 ### STUDIO-501 — Harden authentication and browser security (P0)
 
-- [ ] Disable Studio write APIs by default outside explicit development/test configuration.
-- [ ] Protect read and write APIs consistently with the configured utility API key or the
+- [x] Disable Studio write APIs by default outside explicit development/test configuration.
+      - [x] Require `STUDIO_WRITE_ENABLED=true` for packaged/custom-profile mutations while
+            retaining explicit dev/test defaults and a guarded E2E override.
+- [x] Protect read and write APIs consistently with the configured utility API key or the
       project's future identity provider.
+      - [x] The shared bearer-key filter covers Studio inventory, validation, and mutation routes;
+            an unauthenticated read/write regression test is included.
 - [ ] Separate read, edit, execute, and administration authorization capabilities.
-- [ ] Add CSRF defenses and strict Origin/Host validation for state-changing requests.
-- [ ] Add a restrictive Content Security Policy and avoid unsafe inline script execution.
+- [x] Add CSRF defenses and strict Origin/Host validation for state-changing requests.
+      - [x] Reject cross-origin Studio mutations unless the origin is same-origin or explicitly
+            listed in `STUDIO_ALLOWED_ORIGINS`; non-browser bearer clients without browser origin
+            headers remain supported.
+- [x] Add a restrictive Content Security Policy and avoid unsafe inline script execution.
+      - [x] Studio responses send a self-only CSP with no inline scripts, plus `nosniff` and
+            same-origin referrer policy headers; packaged E2E asserts the policy.
 - [ ] Escape or sanitize workflow, Markdown, OpenAPI, expression, error, and runtime output
       before rendering.
 - [ ] Add rate, concurrency, request-size, and execution-duration limits.
@@ -477,11 +546,19 @@ currently configured key as invalid.
 
 ### STUDIO-503 — Integrate CI, packaging, and supply-chain checks (P0)
 
-- [ ] Run frontend formatting, lint, type checking, unit tests, production build, and E2E
+- [x] Run frontend formatting, lint, type checking, unit tests, production build, and E2E
       tests in CI.
-- [ ] Verify frontend lockfile integrity and pin CI actions/tool versions.
-- [ ] Package only production frontend assets and required schemas in the Quarkus artifact.
-- [ ] Add a generated-asset drift check for Studio bundles and workflow runner resources.
+      - [x] Add a locked Studio frontend CI job for format, lint, typecheck, unit, and production
+            build gates; align Playwright with the pinned Node.js baseline.
+- [x] Verify frontend lockfile integrity and pin CI actions/tool versions.
+      - [x] CI uses `npm ci` against committed lockfiles, direct E2E dependencies are exact,
+            and all GitHub Actions are pinned to immutable commit SHAs with release tags noted.
+- [x] Package only production frontend assets and required schemas in the Quarkus artifact.
+-      - [x] Disable production source maps and verify the packaged asset manifest and bytes
+            match the generated Studio bundle, including the required validation-rules page.
+- [x] Add a generated-asset drift check for Studio bundles and workflow runner resources.
+-      - [x] Add `scripts/check-studio-bundle.sh`; CI already checks the generated workflow
+            mirror and SonataFlow manifest with their corresponding `--check` commands.
 - [ ] Include frontend dependencies in dependency, license, and vulnerability reporting.
 - [ ] Generate a software bill of materials covering backend and frontend dependencies.
 - [ ] Verify container images run as non-root with a read-only application filesystem except
@@ -490,7 +567,7 @@ currently configured key as invalid.
 
 ### STUDIO-504 — Complete documentation and release operations (P0)
 
-- [ ] Update the README with the Studio feature matrix, quick start, supported versions,
+- [x] Update the README with the Studio feature matrix, quick start, supported versions,
       limitations, and links to detailed guides.
 - [ ] Write user guides for browsing, authoring, catalogs, subflows, validation, diff/conflict
       resolution, and execution.

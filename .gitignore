@@ -31,6 +31,11 @@ e2e/test-results/
 e2e/playwright-report/
 e2e/blob-report/
 
+# Studio frontend dependencies and build output
+frontend/studio/node_modules/
+frontend/studio/dist/
+frontend/studio/*.tsbuildinfo
+
 # Security scan reports generated locally or by CI
 trivy-results.sarif
 gitleaks-results.sarif

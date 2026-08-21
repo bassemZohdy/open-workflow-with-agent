@@ -1,0 +1,15 @@
+{
+  "name": "openworkflow-studio-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": "24.18.0",
+    "npm": "11.6.2"
+  },
+  "scripts": {
+    "dev:studio": "node scripts/dev-studio.mjs",
+    "check:studio-bundle": "bash scripts/check-studio-bundle.sh",
+    "check:validation-profile": "bash scripts/check-validation-profile.sh"
+  }
+}

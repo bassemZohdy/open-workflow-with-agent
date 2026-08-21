@@ -1,0 +1,765 @@
+openapi: 3.0.3
+info:
+  title: OpenWorkflow Studio Workspace API
+  version: 1.0.0
+  description: >-
+    Versioned workspace API for listing, validating, and safely persisting canonical
+    OpenWorkflow and OpenAPI catalog source documents.
+servers:
+  - url: /
+    description: Same-origin Quarkus application
+tags:
+  - name: Documents
+  - name: Synchronization
+  - name: Recovery
+security:
+  - bearerAuth: []
+paths:
+  /api/studio/v1/documents:
+    get:
+      tags: [Documents]
+      operationId: listDocuments
+      summary: List canonical workflow and catalog documents
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentKind'
+        - name: prefix
+          in: query
+          description: Normalized path prefix within the selected canonical tree.
+          schema: { type: string, maxLength: 240 }
+        - name: query
+          in: query
+          schema: { type: string, maxLength: 200 }
+        - name: includeDiagnostics
+          in: query
+          schema: { type: boolean, default: false }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Document summaries
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DocumentList' }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [Documents]
+      operationId: createDocument
+      summary: Create a canonical source document
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDocumentRequest' }
+      responses:
+        '201':
+          description: Created document
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '409': { $ref: '#/components/responses/DuplicatePath' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/documents/{kind}/{documentId}:
+    parameters:
+      - $ref: '#/components/parameters/Kind'
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [Documents]
+      operationId: getDocument
+      summary: Read a document envelope or its raw source
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Document in the requested representation
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+            application/yaml:
+              schema: { type: string }
+            text/yaml:
+              schema: { type: string }
+            application/json;source=true:
+              schema: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+        default: { $ref: '#/components/responses/Problem' }
+    put:
+      tags: [Documents]
+      operationId: updateDocument
+      summary: Replace the complete canonical source document
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateDocumentRequest' }
+          application/yaml:
+            schema: { type: string, maxLength: 2097152 }
+          text/yaml:
+            schema: { type: string, maxLength: 2097152 }
+      responses:
+        '200':
+          description: Updated document and derived-artifact status
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '409': { $ref: '#/components/responses/DuplicatePath' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/PreconditionRequired' }
+        default: { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Documents]
+      operationId: deleteDocument
+      summary: Move a document to recoverable trash
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IfMatch'
+        - name: acceptDependencyImpact
+          in: query
+          description: Explicitly acknowledge deletion of a document with canonical dependents.
+          schema: { type: boolean, default: false }
+      responses:
+        '202':
+          description: Document moved to trash and derived sync queued
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrashReceipt' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/PreconditionRequired' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/documents/validate:
+    post:
+      tags: [Documents]
+      operationId: validateScope
+      summary: Validate a document, dependency closure, or the entire workspace
+      description: Validation is read-only. Draft content is evaluated in memory and is never persisted.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ValidateScopeRequest' }
+      responses:
+        '200':
+          description: Validation report grouped by checked document
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationReport' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/documents/{kind}/{documentId}/validate:
+    parameters:
+      - $ref: '#/components/parameters/Kind'
+      - $ref: '#/components/parameters/DocumentId'
+    post:
+      tags: [Documents]
+      operationId: validateDocument
+      summary: Validate the stored revision or an unsaved draft
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ValidateDocumentRequest' }
+          application/yaml:
+            schema: { type: string, maxLength: 2097152 }
+          text/yaml:
+            schema: { type: string, maxLength: 2097152 }
+      responses:
+        '200':
+          description: Ordered diagnostics for the selected source
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/runtime-validation/{kind}/{documentId}:
+    parameters:
+      - $ref: '#/components/parameters/Kind'
+      - $ref: '#/components/parameters/DocumentId'
+    post:
+      tags: [Documents]
+      operationId: validateRuntime
+      summary: Validate a saved workflow with the bundled SonataFlow parser boundary
+      description: >-
+        Read-only, parser/code-generation validation using the same Quarkus/SonataFlow
+        dependency set as the runner. It never starts a workflow, invokes catalog operations,
+        writes canonical or generated files, or resolves remote imports. Runtime validation is
+        disabled by default in packaged/custom profiles and is bounded by configured timeout,
+        concurrency, and diagnostic-output limits.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Separate specification, runtime, deployment, and execution statuses
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RuntimeValidationResult' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/documents/{kind}/{documentId}/rename:
+    parameters:
+      - $ref: '#/components/parameters/Kind'
+      - $ref: '#/components/parameters/DocumentId'
+    post:
+      tags: [Documents]
+      operationId: renameDocument
+      summary: Rename or move a document within its canonical tree
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RenameDocumentRequest' }
+      responses:
+        '200':
+          description: Renamed document with old/new identity mapping
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RenameResult' }
+        '409': { $ref: '#/components/responses/DuplicatePath' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/PreconditionRequired' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/sync:
+    get:
+      tags: [Synchronization]
+      operationId: getSyncStatus
+      summary: Read canonical-to-generated artifact status
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Workspace synchronization status
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncStatus' }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [Synchronization]
+      operationId: requestSync
+      summary: Retry or coalesce generated-artifact synchronization
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operationId: { type: string, maxLength: 128 }
+                documentIds:
+                  type: array
+                  maxItems: 200
+                  items: { type: string }
+      responses:
+        '202':
+          description: Synchronization queued
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncStatus' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /api/studio/v1/trash/{trashId}/restore:
+    parameters:
+      - name: trashId
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 128 }
+    post:
+      tags: [Recovery]
+      operationId: restoreTrashEntry
+      summary: Restore a deleted document to its original path
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IfNoneMatchRequired'
+      responses:
+        '201':
+          description: Restored document
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            X-Request-ID: { $ref: '#/components/headers/RequestId' }
+            X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '409': { $ref: '#/components/responses/DuplicatePath' }
+        '428': { $ref: '#/components/responses/PreconditionRequired' }
+        default: { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+  parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema: { type: string, maxLength: 128, pattern: '^[\x20-\x7E]+$' }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, minLength: 3, maxLength: 200 }
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      schema: { type: string, maxLength: 200 }
+    IfNoneMatchRequired:
+      name: If-None-Match
+      in: header
+      required: true
+      schema: { type: string, maxLength: 200, example: '*' }
+    Kind:
+      name: kind
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/DocumentKind' }
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 256
+        pattern: '^[A-Za-z0-9_-]+$'
+  headers:
+    ETag:
+      description: Quoted SHA-256 hash of exact source bytes.
+      schema: { type: string }
+    RequestId:
+      description: Caller-provided or server-generated request identifier.
+      schema: { type: string }
+    ApiVersion:
+      description: Selected Studio API contract version.
+      schema: { type: string, example: '1' }
+  responses:
+    Problem:
+      description: Normalized problem response
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/RequestId' }
+        X-Studio-API-Version: { $ref: '#/components/headers/ApiVersion' }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Document not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    DuplicatePath:
+      description: Requested path already exists
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RevisionConflict:
+      description: Source revision is stale
+      headers:
+        ETag: { $ref: '#/components/headers/ETag' }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PreconditionRequired:
+      description: Required concurrency precondition was omitted
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    DocumentKind:
+      type: string
+      enum: [workflow, catalog]
+    DocumentFormat:
+      type: string
+      enum: [yaml, json]
+    CompatibilityMode:
+      type: string
+      enum: [editable, partial, source-readonly]
+    GenerationState:
+      type: string
+      enum: [pending, in_sync, out_of_sync, blocked, disabled]
+    GenerationStatus:
+      type: object
+      required: [state]
+      properties:
+        state: { $ref: '#/components/schemas/GenerationState' }
+        operationId: { type: string }
+        lastAttempt: { type: string, format: date-time }
+        message: { type: string }
+        artifacts:
+          type: array
+          items: { $ref: '#/components/schemas/GeneratedArtifact' }
+    GeneratedArtifact:
+      type: object
+      required: [path, state]
+      properties:
+        path: { type: string }
+        state: { $ref: '#/components/schemas/GenerationState' }
+        sourceEtag: { type: string }
+        generatedEtag: { type: string }
+        lastAttempt: { type: string, format: date-time }
+        message: { type: string }
+    DocumentSummary:
+      type: object
+      required: [id, kind, path, format, sizeBytes, etag, compatibility, generation]
+      properties:
+        id: { type: string }
+        kind: { $ref: '#/components/schemas/DocumentKind' }
+        path: { type: string }
+        displayName: { type: string }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+        sizeBytes: { type: integer, minimum: 0 }
+        etag: { type: string }
+        revisionNumber: { type: integer, minimum: 1 }
+        modifiedAt: { type: string, format: date-time }
+        compatibility: { $ref: '#/components/schemas/CompatibilityMode' }
+        specVersion: { type: string }
+        openapi: { type: string }
+        documentVersion: { type: string }
+        name: { type: string }
+        workflowId: { type: string }
+        stateTypes:
+          type: array
+          items: { type: string }
+        catalogAliases:
+          type: array
+          items: { type: string }
+        functionReferences:
+          type: array
+          items: { type: string }
+        catalogReferences:
+          type: array
+          items: { type: string }
+        subflowReferences:
+          type: array
+          items: { type: string }
+        reusableSubflow: { type: boolean }
+        parseStatus:
+          type: string
+          enum: [parsed, error]
+        validationState:
+          type: string
+          enum: [valid, parse-error, unsupported]
+        generation: { $ref: '#/components/schemas/GenerationStatus' }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
+    Document:
+      allOf:
+        - $ref: '#/components/schemas/DocumentSummary'
+        - type: object
+          required: [content]
+          properties:
+            content: { type: string, maxLength: 2097152 }
+            metadata:
+              $ref: '#/components/schemas/DocumentMetadata'
+            sourceTree:
+              description: Parsed source tree used for safe generic details rendering.
+              type: object
+              additionalProperties: true
+    DocumentList:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/DocumentSummary' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 200 }
+        total: { type: integer, minimum: 0 }
+    NamedItem:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        detail: { type: string }
+    DocumentMetadata:
+      type: object
+      properties:
+        workflowId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        version: { type: string }
+        specVersion: { type: string }
+        openapi: { type: string }
+        start: { type: string }
+        timeouts: { type: object, additionalProperties: true }
+        constants: { type: object, additionalProperties: true }
+        annotations: { type: object, additionalProperties: true }
+        extensions: { type: array, items: { type: object, additionalProperties: true } }
+        functions: { type: array, items: { $ref: '#/components/schemas/NamedItem' } }
+        events: { type: array, items: { $ref: '#/components/schemas/NamedItem' } }
+        errors: { type: array, items: { $ref: '#/components/schemas/NamedItem' } }
+        stateCounts: { type: object, additionalProperties: { type: integer } }
+        terminalStates: { type: array, items: { type: string } }
+        subflowReferences: { type: array, items: { type: string } }
+    CreateDocumentRequest:
+      type: object
+      required: [kind, path, content]
+      properties:
+        kind: { $ref: '#/components/schemas/DocumentKind' }
+        path: { type: string, minLength: 1, maxLength: 240 }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+        content: { type: string, maxLength: 2097152 }
+    UpdateDocumentRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, maxLength: 2097152 }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+    ValidateDocumentRequest:
+      type: object
+      properties:
+        content: { type: string, maxLength: 2097152 }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+    ValidateScopeRequest:
+      type: object
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          enum: [document, dependencies, workspace]
+        kind: { $ref: '#/components/schemas/DocumentKind' }
+        documentId: { type: string }
+        content: { type: string, maxLength: 2097152 }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+    RenameDocumentRequest:
+      type: object
+      required: [path]
+      properties:
+        path: { type: string, minLength: 1, maxLength: 240 }
+    RenameResult:
+      type: object
+      required: [document, previousId, previousPath]
+      properties:
+        document: { $ref: '#/components/schemas/Document' }
+        previousId: { type: string }
+        previousPath: { type: string }
+    TrashReceipt:
+      type: object
+      required: [trashId, originalPath, originalEtag, expiresAt, generation]
+      properties:
+        trashId: { type: string }
+        originalPath: { type: string }
+        originalEtag: { type: string }
+        deletedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        generation: { $ref: '#/components/schemas/GenerationStatus' }
+    Diagnostic:
+      type: object
+      required: [id, ruleId, phase, severity, message, provenance, documentationUrl, suppressible]
+      properties:
+        id: { type: string }
+        ruleId: { type: string }
+        phase:
+          type: string
+          enum: [parse, schema, semantic, compatibility, runtime]
+        severity:
+          type: string
+          enum: [error, warning, info, hint]
+        message: { type: string }
+        explanation: { type: string }
+        suggestedResolution: { type: string }
+        primaryRange: { $ref: '#/components/schemas/SourceRange' }
+        relatedRanges:
+          type: array
+          items:
+            type: object
+            required: [range]
+            properties:
+              message: { type: string }
+              range: { $ref: '#/components/schemas/SourceRange' }
+        fieldPath: { type: string }
+        nodeId: { type: string }
+        documentationUrl: { type: string, format: uri }
+        suppressible: { type: boolean }
+        provenance:
+          type: string
+          enum: [local-parser, local-schema, local-analyzer, sonataflow]
+    SourceRange:
+      type: object
+      required: [start, end, encoding]
+      properties:
+        start: { $ref: '#/components/schemas/Position' }
+        end: { $ref: '#/components/schemas/Position' }
+        encoding:
+          type: string
+          enum: [utf-16-code-units]
+    Position:
+      type: object
+      required: [offset, line, column]
+      properties:
+        offset: { type: integer, minimum: 0 }
+        line: { type: integer, minimum: 1 }
+        column: { type: integer, minimum: 1 }
+    ValidationResult:
+      type: object
+      required: [valid, diagnostics, etag, compatibility, sourceTree]
+      properties:
+        valid: { type: boolean }
+        etag: { type: string }
+        compatibility: { $ref: '#/components/schemas/CompatibilityMode' }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
+        sourceTree:
+          type: object
+          nullable: true
+          additionalProperties: true
+    ValidationReport:
+      type: object
+      required: [scope, valid, documentsChecked, documents, diagnostics]
+      properties:
+        scope:
+          type: string
+          enum: [document, dependencies, workspace]
+        valid: { type: boolean }
+        documentsChecked: { type: integer, minimum: 0 }
+        documents:
+          type: array
+          items: { $ref: '#/components/schemas/ValidationDocument' }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
+    ValidationDocument:
+      type: object
+      required: [id, kind, path, etag, valid, diagnostics]
+      properties:
+        id: { type: string }
+        kind: { $ref: '#/components/schemas/DocumentKind' }
+        path: { type: string }
+        etag: { type: string }
+        valid: { type: boolean }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
+    RuntimeValidationResult:
+      type: object
+      required: [documentId, path, sourceEtag, specificationStatus, runtimeStatus,
+        deploymentStatus, executionStatus, valid, readOnly, sideEffectsExecuted,
+        elapsedMillis, diagnosticOutputBytes, compiledNodeCount, diagnostics]
+      properties:
+        documentId: { type: string }
+        path: { type: string }
+        sourceEtag: { type: string }
+        specificationStatus: { type: string, enum: [valid, invalid] }
+        runtimeStatus: { type: string, enum: [valid, invalid, timed-out] }
+        deploymentStatus: { type: string, enum: [not-evaluated] }
+        executionStatus: { type: string, enum: [not-evaluated] }
+        valid: { type: boolean }
+        readOnly: { type: boolean, const: true }
+        sideEffectsExecuted: { type: boolean, const: false }
+        elapsedMillis: { type: integer, minimum: 0 }
+        diagnosticOutputBytes: { type: integer, minimum: 0 }
+        compiledNodeCount: { type: integer, minimum: 0 }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
+    SyncStatus:
+      type: object
+      required: [state, policy, artifacts]
+      properties:
+        state: { $ref: '#/components/schemas/GenerationState' }
+        policy: { type: string, enum: [on-save] }
+        operationId: { type: string }
+        artifacts:
+          type: array
+          items: { $ref: '#/components/schemas/GeneratedArtifact' }
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field: { type: string }
+        message: { type: string }
+    Conflict:
+      type: object
+      required: [expectedEtag, actualEtag, merge]
+      properties:
+        expectedEtag: { type: string }
+        actualEtag: { type: string }
+        currentDocument: { $ref: '#/components/schemas/Document' }
+        merge: { type: string, enum: [three-way-client] }
+    Problem:
+      type: object
+      required: [type, title, status, code, detail, requestId]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string }
+        requestId: { type: string }
+        fieldErrors:
+          type: array
+          items: { $ref: '#/components/schemas/FieldError' }
+        conflict: { $ref: '#/components/schemas/Conflict' }

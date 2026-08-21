@@ -102,6 +102,27 @@ class ApiKeyAuthFilterTest {
     }
 
     @Test
+    void gatesStudioReadAndWriteEndpointsToo() {
+        given()
+                .when()
+                .get("/api/studio/v1/documents")
+                .then()
+                .statusCode(401);
+        given()
+                .contentType("application/json")
+                .body("{\"kind\":\"workflow\",\"path\":\"blocked.sw.yaml\",\"content\":\"id: blocked\\n\"}")
+                .when()
+                .post("/api/studio/v1/documents")
+                .then()
+                .statusCode(401);
+        given()
+                .when()
+                .post("/api/studio/v1/runtime-validation/workflow/unknown")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
     void rejectsUnauthenticatedCloudEventIngress() {
         given()
                 .contentType("application/cloudevents+json")

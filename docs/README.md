@@ -24,6 +24,51 @@ Java sources are only the reference runner that executes it (see the README's
 
 ## Technical Documentation Modules
 
+### Studio design notes
+
+1. [**Studio use cases and information architecture**](studio/01-use-cases-and-information-architecture.md)
+   * Personas, core journeys, navigation, non-happy-path states, and MVP success measures for the browser-based Studio.
+
+2. [**Studio frontend and build architecture DAR**](studio/02-frontend-and-build-architecture-dar.md)
+   * Formal comparison of the static console, React/Vite, and Vue/Vite approaches, with editor, graph, Maven, development, browser, and dependency decisions.
+
+3. [**Studio version-aware document model**](studio/03-version-aware-document-model.md)
+   * Canonical workflow/catalog inventory, lossless CST and typed projections, preservation rules, diagnostics, compatibility modes, identities, and golden fixtures.
+
+4. [**Studio workspace API and persistence**](studio/04-workspace-api-and-persistence.md)
+   * Versioned CRUD/validation API, ETags and conflict recovery, atomic saves, recoverable trash, generated-artifact synchronization, and naming limits. The published contract is [`openapi/studio-api.yaml`](studio/openapi/studio-api.yaml).
+
+5. [**Studio UX and visual foundations**](studio/05-ux-and-visual-foundations.md)
+   * Shared shell and page layouts, semantic visual tokens, Light/Dark/High Contrast behavior, keyboard interaction, WCAG 2.2 AA gates, and desktop/tablet/read-only layouts.
+
+6. [**Studio 0.8 runtime capability profile**](studio/06-runtime-capability-profile.md)
+   * Advanced state authoring coverage and the boundary between schema validity, runtime compatibility, and execution verification.
+
+The first frontend scaffold lives in [`frontend/studio/`](../frontend/studio/README.md). It
+is packaged into the Quarkus application under `/studio/` while the existing execution
+console remains at `/`. The workspace explorer uses the first implemented slice of
+`GET /api/studio/v1/documents` and never lists generated runner resources. The STUDIO-103
+document view reads canonical source through `GET /api/studio/v1/documents/{kind}/{documentId}`
+and exposes source-preserving metadata and generic extension details. STUDIO-202 adds the
+editable source lifecycle: repository-derived templates, import/duplicate/rename/save/export/
+delete actions, per-document recoverable drafts, dirty-navigation guards, live draft validation,
+save previews, and ETag conflict recovery. Autosave is intentionally disabled.
+STUDIO-203 adds the source-preserving workflow metadata form for identity, versions, expression
+language, declared start states, keep-active behavior, timeouts, constants, annotations, and
+extensions; required values and missing start-state references are guarded before save. The form
+also classifies preserved unsupported fields and provides version-specific inline examples.
+STUDIO-104 adds the workflow graph projection, including branch semantics, source links,
+reachability warnings, a text-accessible outline, and source-preserving direct transition
+editing with a Form handoff for transition details. STUDIO-105 adds local OpenAPI
+catalog operations and schema views, operation backlinks, subflow contract details, and
+inbound/outbound dependency navigation. STUDIO-106 adds deterministic local syntax, workflow
+0.8 profile, and OpenAPI 3.x profile diagnostics with source ranges and the filterable issue
+panel; browsing never fetches remote schemas. STUDIO-201 adds a guarded workspace mutation API
+with canonical-root path checks, atomic ETag-protected writes, recoverable trash, dependency
+impact checks, stale-generation status, and metadata-only audit events.
+
+### Existing reference implementation
+
 1. [**Pattern 1: LLM Catalog Call**](01-llm-catalog-call.md)
    * Single OpenAI-compatible chat completion through a catalog function, with guardrails living in the workflow (`llm-chat.sw.yaml`).
 

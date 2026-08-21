@@ -17,3 +17,7 @@ updates:
     directory: "/e2e"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/frontend/studio"
+    schedule:
+      interval: "weekly"
