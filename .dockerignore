@@ -1,0 +1,6 @@
+.git/
+target/
+frontend/studio/node_modules/
+frontend/studio/dist/
+frontend/studio/*.tsbuildinfo
+frontend/studio/.env*

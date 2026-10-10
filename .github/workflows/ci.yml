@@ -78,6 +78,9 @@ jobs:
       - name: Verify packaged Studio bundle
         run: bash scripts/check-studio-bundle.sh
 
+      - name: Test validation profile checker
+        run: python3 scripts/test-validation-profile.py
+
       - name: Verify validation profile alignment
         run: bash scripts/check-validation-profile.sh
 

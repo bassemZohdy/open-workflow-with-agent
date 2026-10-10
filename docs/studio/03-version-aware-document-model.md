@@ -229,6 +229,12 @@ The shared rule-set manifest is [`validation-profile.json`](validation-profile.j
 browser source, backend diagnostics, Maven properties, and CI drift gate all contain the same
 profile and rule-set values.
 
+Run `bash scripts/check-validation-profile.sh` from the repository root to check
+alignment, or run `python3 scripts/check-validation-profile.py` directly. The checker
+requires Python 3.9 or newer and uses only its standard library; Ruby and ripgrep
+are not required. CI also runs `python3 scripts/test-validation-profile.py` to verify
+that missing tools, malformed inputs and genuine profile drift remain distinct.
+
 The view index maps CST nodes to field paths and graph nodes, and maps diagnostics to one
 or more source links. Source → form/graph focuses the linked field/node. Form/graph →
 source selects the exact range. A graph element with multiple ranges uses the state or
